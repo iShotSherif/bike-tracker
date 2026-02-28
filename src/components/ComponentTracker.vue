@@ -14,7 +14,7 @@ const newIntervalKm = ref(1000)
 const newDateStarted = ref<string>('')
 const newKmAtStart = ref<number | ''>('')
 
-const components = computed(() => getComponentsForBike(props.bikeId))
+const STATUS_ORDER: Record<'overdue' | 'soon' | 'ok', number> = { overdue: 0, soon: 1, ok: 2 }
 
 // Current km from activities — same data source as kmAtStart, so the delta is always correct
 const currentKmFromActivities = computed(() => kmAtDate(props.bikeId, todayISO()))
@@ -70,9 +70,24 @@ function markDone(c: BikeComponent) {
   })
 }
 
+function progressPct(c: BikeComponent): number {
+  if (c.intervalKm <= 0) return 0
+  return Math.min(100, (kmSinceStart(c) / c.intervalKm) * 100)
+}
+
 function sinceText(c: BikeComponent): string {
   return formatSince(c.dateStarted)
 }
+
+const components = computed(() => {
+  const list = getComponentsForBike(props.bikeId)
+  return [...list].sort((a, b) => {
+    const sa = STATUS_ORDER[status(a)]
+    const sb = STATUS_ORDER[status(b)]
+    if (sa !== sb) return sa - sb
+    return kmUntilAlert(a) - kmUntilAlert(b)
+  })
+})
 </script>
 
 <template>
@@ -108,6 +123,9 @@ function sinceText(c: BikeComponent): string {
             ×
           </button>
         </div>
+        <div class="component-progress">
+          <div class="progress-fill" :data-status="status(c)" :style="{ width: progressPct(c) + '%' }"></div>
+        </div>
       </div>
     </div>
 
@@ -137,9 +155,10 @@ function sinceText(c: BikeComponent): string {
 .component-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
+  grid-template-rows: auto auto;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: 0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem 0.6rem;
   background: var(--surface);
   border-radius: 8px;
   border-left: 3px solid var(--border);
@@ -170,4 +189,8 @@ function sinceText(c: BikeComponent): string {
 .btn-primary:hover { filter: brightness(1.1); }
 .btn-add { border-style: dashed; color: var(--muted); }
 .btn-add:hover { color: var(--accent); border-color: var(--accent); }
+.component-progress { grid-column: 1 / -1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width 0.4s ease; }
+.progress-fill[data-status="soon"] { background: var(--warning); }
+.progress-fill[data-status="overdue"] { background: var(--danger); }
 </style>

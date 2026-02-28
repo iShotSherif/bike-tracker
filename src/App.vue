@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useTracker } from '@/composables/useTracker'
 import BikeCard from '@/components/BikeCard.vue'
 
@@ -9,6 +9,8 @@ const keyInput = ref('')
 const showKey = ref(false)
 
 watch(apiKey, (v) => { keyInput.value = v }, { immediate: true })
+
+onMounted(() => { if (apiKey.value.trim()) loadAthlete() })
 
 function saveKey() {
   setApiKey(keyInput.value.trim())

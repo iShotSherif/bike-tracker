@@ -49,6 +49,7 @@ function saveState(state: Partial<TrackerState>): void {
 }
 
 const apiKey = ref<string>(loadState().apiKey ?? '')
+const stravaConnected = ref<boolean>(loadState().stravaConnected ?? false)
 const athlete = ref<IntervalsAthlete | null>(null)
 const activities = ref<IntervalsActivity[]>([])
 const loading = ref(false)
@@ -70,6 +71,7 @@ const userId = computed<string>(() =>
 function persist(): void {
   saveState({
     apiKey: apiKey.value,
+    stravaConnected: stravaConnected.value,
     componentsByBike: componentsByBike.value,
     serviceLog: serviceLog.value,
     notificationSettings: notificationSettings.value,
@@ -227,6 +229,59 @@ async function pullProfileFromCloud(): Promise<boolean> {
   } catch { return false }
 }
 
+function connectStrava(): void {
+  const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+  if (!workerUrl || !userId.value) return
+  window.location.href = `${workerUrl}/strava/auth?userId=${encodeURIComponent(userId.value)}`
+}
+
+async function loadStravaActivities(): Promise<void> {
+  const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+  if (!workerUrl || !userId.value) return
+  loading.value = true
+  error.value = null
+  try {
+    const res = await fetch(`${workerUrl}/strava/activities?userId=${encodeURIComponent(userId.value)}`)
+    if (!res.ok) {
+      if (res.status === 401) {
+        stravaConnected.value = false
+        persist()
+        error.value = 'Session Strava expirée. Reconnecte ton compte.'
+        return
+      }
+      throw new Error(`Strava error: ${res.status}`)
+    }
+    const data = await res.json() as { bikes: IntervalsBike[]; activities: IntervalsActivity[] }
+
+    // Merge Strava bikes into athlete (or create a synthetic athlete if none)
+    if (!athlete.value) {
+      athlete.value = { id: 'strava', name: 'Strava', bikes: data.bikes }
+    } else {
+      const existingIds = new Set(athlete.value.bikes.map((b) => b.id))
+      const newBikes = data.bikes.filter((b) => !existingIds.has(b.id))
+      athlete.value = { ...athlete.value, bikes: [...athlete.value.bikes, ...newBikes] }
+    }
+
+    // Merge Strava activities (deduplicate by id)
+    const existingActivityIds = new Set(activities.value.map((a) => a.id))
+    const newActivities = data.activities.filter((a) => !existingActivityIds.has(a.id))
+    activities.value = [...activities.value, ...newActivities]
+
+    stravaConnected.value = true
+    persist()
+
+    const restored = await pullProfileFromCloud()
+    if (!restored) {
+      data.bikes.forEach((bike) => initDefaultComponents(bike.id))
+    }
+    await syncToWorker()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Impossible de charger les activités Strava'
+  } finally {
+    loading.value = false
+  }
+}
+
 function resetAthlete(): void {
   athlete.value = null
   activities.value = []
@@ -318,5 +373,8 @@ export function useTracker() {
     pushProfileToCloud,
     pullProfileFromCloud,
     resetAthlete,
+    stravaConnected,
+    connectStrava,
+    loadStravaActivities,
   }
 }

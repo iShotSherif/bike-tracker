@@ -3,7 +3,10 @@ interface Env {
   RESEND_API_KEY: string
   VAPID_PRIVATE_KEY: string
   VAPID_PUBLIC_KEY: string
-  VAPID_SUBJECT: string  // e.g. "mailto:admin@example.com"
+  VAPID_SUBJECT: string
+  STRAVA_CLIENT_ID: string
+  STRAVA_CLIENT_SECRET: string
+  STRAVA_REDIRECT_URI: string  // e.g. https://bike-tracker-worker.componenttracker.workers.dev/strava/callback
 }
 
 interface PushSubscription {
@@ -73,6 +76,18 @@ export default {
       return handleProfileGet(userId, env)
     }
 
+    if (request.method === 'GET' && pathname === '/strava/auth') {
+      return handleStravaAuth(request, env)
+    }
+
+    if (request.method === 'GET' && pathname === '/strava/callback') {
+      return handleStravaCallback(request, env)
+    }
+
+    if (request.method === 'GET' && pathname === '/strava/activities') {
+      return handleStravaActivities(request, env)
+    }
+
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
   },
 
@@ -126,6 +141,196 @@ async function handleProfileGet(userId: string, env: Env): Promise<Response> {
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
   }
   return new Response(raw, { status: 200, headers: CORS })
+}
+
+// --- Strava OAuth ---
+
+interface StravaTokens {
+  access_token: string
+  refresh_token: string
+  expires_at: number
+  athlete_id: number
+}
+
+interface StravaAthleteGear {
+  id: string
+  name: string
+  distance: number
+  primary: boolean
+}
+
+interface StravaActivity {
+  id: number
+  name: string
+  type: string
+  start_date: string
+  distance: number
+  moving_time: number
+  gear_id: string | null
+}
+
+function stravaKey(userId: string): string {
+  return `strava:${userId}`
+}
+
+function generateState(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function handleStravaAuth(request: Request, env: Env): Promise<Response> {
+  const { searchParams } = new URL(request.url)
+  const userId = searchParams.get('userId')
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+  }
+
+  const state = `${userId}:${generateState()}`
+  // Store state briefly to validate on callback (5 min TTL)
+  await env.ALERT_STORE.put(`strava-state:${state}`, userId, { expirationTtl: 300 })
+
+  const params = new URLSearchParams({
+    client_id: env.STRAVA_CLIENT_ID,
+    redirect_uri: env.STRAVA_REDIRECT_URI,
+    response_type: 'code',
+    approval_prompt: 'auto',
+    scope: 'activity:read_all,profile:read_all',
+    state,
+  })
+
+  return Response.redirect(`https://www.strava.com/oauth/authorize?${params}`, 302)
+}
+
+async function handleStravaCallback(request: Request, env: Env): Promise<Response> {
+  const { searchParams } = new URL(request.url)
+  const code = searchParams.get('code')
+  const state = searchParams.get('state')
+  const errorParam = searchParams.get('error')
+
+  const frontendUrl = env.STRAVA_REDIRECT_URI.replace('/strava/callback', '')
+
+  if (errorParam || !code || !state) {
+    return Response.redirect(`${frontendUrl}?strava=denied`, 302)
+  }
+
+  // Validate state
+  const storedUserId = await env.ALERT_STORE.get(`strava-state:${state}`)
+  if (!storedUserId) {
+    return Response.redirect(`${frontendUrl}?strava=error`, 302)
+  }
+  await env.ALERT_STORE.delete(`strava-state:${state}`)
+
+  // Exchange code for tokens
+  const tokenRes = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: env.STRAVA_CLIENT_ID,
+      client_secret: env.STRAVA_CLIENT_SECRET,
+      code,
+      grant_type: 'authorization_code',
+    }),
+  })
+
+  if (!tokenRes.ok) {
+    return Response.redirect(`${frontendUrl}?strava=error`, 302)
+  }
+
+  const tokenData = await tokenRes.json() as StravaTokens & { athlete?: { bikes?: StravaAthleteGear[] } }
+  const tokens: StravaTokens = {
+    access_token: tokenData.access_token,
+    refresh_token: tokenData.refresh_token,
+    expires_at: tokenData.expires_at,
+    athlete_id: tokenData.athlete_id,
+  }
+  await env.ALERT_STORE.put(stravaKey(storedUserId), JSON.stringify(tokens))
+
+  return Response.redirect(`${frontendUrl}?strava=connected`, 302)
+}
+
+async function refreshStravaToken(env: Env, tokens: StravaTokens): Promise<StravaTokens> {
+  const res = await fetch('https://www.strava.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_id: env.STRAVA_CLIENT_ID,
+      client_secret: env.STRAVA_CLIENT_SECRET,
+      refresh_token: tokens.refresh_token,
+      grant_type: 'refresh_token',
+    }),
+  })
+  if (!res.ok) throw new Error('Token refresh failed')
+  const data = await res.json() as StravaTokens
+  return { ...tokens, access_token: data.access_token, refresh_token: data.refresh_token, expires_at: data.expires_at }
+}
+
+async function handleStravaActivities(request: Request, env: Env): Promise<Response> {
+  const { searchParams } = new URL(request.url)
+  const userId = searchParams.get('userId')
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+  }
+
+  const raw = await env.ALERT_STORE.get(stravaKey(userId))
+  if (!raw) {
+    return new Response(JSON.stringify({ error: 'Not connected' }), { status: 401, headers: CORS })
+  }
+
+  let tokens = JSON.parse(raw) as StravaTokens
+
+  // Refresh if expired (with 60s buffer)
+  if (Date.now() / 1000 > tokens.expires_at - 60) {
+    try {
+      tokens = await refreshStravaToken(env, tokens)
+      await env.ALERT_STORE.put(stravaKey(userId), JSON.stringify(tokens))
+    } catch {
+      return new Response(JSON.stringify({ error: 'Token refresh failed' }), { status: 401, headers: CORS })
+    }
+  }
+
+  // Fetch athlete profile to get bikes
+  const athleteRes = await fetch('https://www.strava.com/api/v3/athlete', {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  })
+  const athleteData = athleteRes.ok
+    ? await athleteRes.json() as { bikes?: StravaAthleteGear[] }
+    : { bikes: [] }
+
+  const bikes = (athleteData.bikes ?? []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    distance: b.distance,
+    primary: b.primary,
+  }))
+
+  // Fetch last 2 years of activities (paginated)
+  const after = Math.floor((Date.now() - 730 * 24 * 60 * 60 * 1000) / 1000)
+  const allActivities: StravaActivity[] = []
+  let page = 1
+  while (true) {
+    const res = await fetch(
+      `https://www.strava.com/api/v3/athlete/activities?after=${after}&per_page=200&page=${page}`,
+      { headers: { Authorization: `Bearer ${tokens.access_token}` } }
+    )
+    if (!res.ok) break
+    const batch = await res.json() as StravaActivity[]
+    if (batch.length === 0) break
+    allActivities.push(...batch)
+    if (batch.length < 200) break
+    page++
+  }
+
+  // Map to IntervalsActivity shape
+  const activities = allActivities.map((a) => ({
+    id: `strava-${a.id}`,
+    start_date_local: a.start_date,
+    type: a.type,
+    distance: a.distance, // meters, same as Intervals
+    moving_time: a.moving_time,
+    gear: a.gear_id ? { id: a.gear_id } : undefined,
+  }))
+
+  return new Response(JSON.stringify({ bikes, activities }), { status: 200, headers: CORS })
 }
 
 async function handleTestNotify(request: Request, env: Env): Promise<Response> {

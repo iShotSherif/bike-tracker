@@ -5,7 +5,7 @@ import { useTracker } from '@/composables/useTracker'
 
 const emit = defineEmits<{ close: [] }>()
 
-const { authToken, userId, importState, pushProfileToCloud } = useTracker()
+const { authToken, userId } = useTracker()
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL as string | undefined
 
@@ -26,7 +26,6 @@ const expired = computed(() => secondsLeft.value <= 0)
 onMounted(async () => {
   if (!WORKER_URL) {
     // Fallback: encode API key in URL
-    const params = new URLSearchParams(window.location.search)
     const key = (useTracker()).apiKey.value
     if (key) {
       const fallbackUrl = `${window.location.origin}${window.location.pathname}?key=${encodeURIComponent(key)}`

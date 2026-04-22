@@ -146,7 +146,7 @@ function sinceText(c: BikeComponent): string {
   return formatSince(c.dateStarted)
 }
 
-const STATUS_ORDER: Record<'overdue' | 'soon' | 'ok', number> = { overdue: 0, soon: 1, ok: 2 }
+const STATUS_ORDER: Record<'overdue' | 'soon' | 'watch' | 'ok', number> = { overdue: 0, soon: 1, watch: 2, ok: 3 }
 
 const components = computed(() => {
   const list = getComponentsForBike(props.bikeId)

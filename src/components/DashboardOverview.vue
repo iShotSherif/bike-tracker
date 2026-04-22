@@ -1,0 +1,126 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useTracker } from '@/composables/useTracker'
+import { alertDetail as _alertDetail } from '@/utils/status'
+import { todayISO } from '@/utils/date'
+
+const { alertComponents, kmAtDate } = useTracker()
+
+const overdueItems = computed(() => alertComponents.value.filter((i) => i.status === 'overdue'))
+const soonItems = computed(() => alertComponents.value.filter((i) => i.status === 'soon'))
+
+function alertDetail(bikeId: string, c: Parameters<typeof _alertDetail>[0]): string {
+  return _alertDetail(c, kmAtDate(bikeId, todayISO()))
+}
+
+function scrollToBike(bikeId: string) {
+  const el = document.getElementById(`bike-${bikeId}`)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  el.classList.add('highlight')
+  setTimeout(() => el.classList.remove('highlight'), 1800)
+}
+</script>
+
+<template>
+  <section v-if="alertComponents.length" class="dashboard">
+    <h2 class="dashboard-title">Needs attention</h2>
+    <div v-if="overdueItems.length" class="dashboard-group">
+      <h3 class="group-label overdue-label">Overdue</h3>
+      <div
+        v-for="item in overdueItems"
+        :key="item.component.id"
+        class="alert-item overdue-item"
+        @click="scrollToBike(item.bikeId)"
+      >
+        <span class="alert-name">{{ item.component.name }}</span>
+        <span class="alert-bike">{{ item.bikeName }}</span>
+        <span class="alert-detail">{{ alertDetail(item.bikeId, item.component) }}</span>
+      </div>
+    </div>
+    <div v-if="soonItems.length" class="dashboard-group">
+      <h3 class="group-label soon-label">Due soon</h3>
+      <div
+        v-for="item in soonItems"
+        :key="item.component.id"
+        class="alert-item soon-item"
+        @click="scrollToBike(item.bikeId)"
+      >
+        <span class="alert-name">{{ item.component.name }}</span>
+        <span class="alert-bike">{{ item.bikeName }}</span>
+        <span class="alert-detail">{{ alertDetail(item.bikeId, item.component) }}</span>
+      </div>
+    </div>
+  </section>
+  <section v-else class="dashboard dashboard-ok">
+    <span class="ok-dot"></span>
+    <span class="ok-badge">All components OK</span>
+  </section>
+</template>
+
+<style scoped>
+.dashboard {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.dashboard-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.75rem 0;
+}
+.dashboard-group { margin-bottom: 0.6rem; }
+.dashboard-group:last-child { margin-bottom: 0; }
+.group-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin: 0 0 0.3rem 0;
+}
+.overdue-label { color: var(--danger); }
+.soon-label { color: var(--warning); }
+
+.alert-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.88rem;
+  flex-wrap: wrap;
+  transition: background 0.12s;
+}
+.overdue-item { background: var(--danger-light); border-left: 3px solid var(--danger); }
+.overdue-item:hover { filter: brightness(0.97); }
+.soon-item { background: var(--warning-light); border-left: 3px solid var(--warning); }
+.soon-item:hover { filter: brightness(0.97); }
+.alert-name { font-weight: 600; min-width: 8rem; }
+.alert-bike { color: var(--muted); font-size: 0.83rem; min-width: 6rem; }
+.alert-detail { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); margin-left: auto; }
+
+.dashboard-ok {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.25rem;
+}
+.ok-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+.ok-badge {
+  font-size: 0.85rem;
+  color: var(--ok);
+  font-weight: 600;
+}
+</style>

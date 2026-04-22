@@ -8,6 +8,7 @@ function authHeader(apiKey: string): string {
 }
 
 export async function fetchAthlete(apiKey: string): Promise<IntervalsAthlete> {
+  console.log('[intervals] fetchAthlete →', `${BASE}/athlete/0`)
   const res = await fetch(`${BASE}/athlete/0`, {
     headers: { Authorization: authHeader(apiKey) },
   })

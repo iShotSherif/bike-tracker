@@ -1,0 +1,16 @@
+name = "bike-tracker-worker"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+[triggers]
+crons = ["0 8 * * *"]
+
+[[kv_namespaces]]
+binding = "ALERT_STORE"
+id = "b60058ac354444728f4c5477bfb735f8"
+preview_id = "96419864e447423583ec514024ee600b"
+
+[vars]
+VAPID_PUBLIC_KEY = "2LFPJP-rTGpdLJ6AFKZ1ZE0VDIFAmoQQLb73yuBkYbE6nRmz-gEGvNIeCpgaJ93wNj7PYA870hIgpGtnCyFmmg"
+VAPID_SUBJECT = "mailto:pruvotpaul@gmail.com"
+# VAPID_PRIVATE_KEY and RESEND_API_KEY are secrets — set via: wrangler secret put VAPID_PRIVATE_KEY

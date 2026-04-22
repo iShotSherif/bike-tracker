@@ -5,6 +5,7 @@ import BikeCard from '@/components/BikeCard.vue'
 import DashboardOverview from '@/components/DashboardOverview.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 import AuthScreen from '@/components/AuthScreen.vue'
+import HandoffModal from '@/components/HandoffModal.vue'
 
 const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete, stravaConnected, connectStrava, loadStravaActivities, authToken, login, logout } = useTracker()
 
@@ -12,11 +13,49 @@ const keyInput = ref('')
 const showKey = ref(false)
 const importError = ref('')
 const showAuth = ref(false)
+const showHandoff = ref(false)
+const handoffBadge = ref('')
 
 watch(apiKey, (v) => { keyInput.value = v }, { immediate: true })
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
+
+  // QR handoff — restore session from token
+  const handoffToken = params.get('handoff')
+  if (handoffToken) {
+    window.history.replaceState({}, '', window.location.pathname)
+    const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+    if (workerUrl) {
+      try {
+        const res = await fetch(`${workerUrl}/handoff/${handoffToken}`)
+        if (res.ok) {
+          const data = await res.json() as { sessionToken?: string; profileSnapshot?: Record<string, unknown> }
+          if (data.sessionToken) {
+            authToken.value = data.sessionToken
+          }
+          if (data.profileSnapshot) {
+            importState(JSON.stringify(data.profileSnapshot))
+          }
+          handoffBadge.value = 'Profil chargé sur cet appareil'
+          setTimeout(() => { handoffBadge.value = '' }, 4000)
+        }
+      } catch { /* best effort */ }
+    } else {
+      // no worker — nothing to redeem
+    }
+    if (apiKey.value.trim()) await loadAthlete()
+    return
+  }
+
+  // Fallback key pre-fill via ?key=
+  const urlKey = params.get('key')
+  if (urlKey) {
+    window.history.replaceState({}, '', window.location.pathname)
+    setApiKey(urlKey)
+    await loadAthlete()
+    return
+  }
 
   // Magic link auto-login via URL params
   const urlOtp = params.get('otp')
@@ -88,6 +127,7 @@ function triggerImport() {
       </div>
     </header>
 
+    <HandoffModal v-if="showHandoff" @close="showHandoff = false" />
     <AuthScreen v-if="showAuth" @done="onAuthDone" />
 
     <section v-else-if="!athlete && !loading" class="setup">
@@ -144,6 +184,7 @@ function triggerImport() {
       <div v-if="error" class="error">{{ error }}</div>
       <div v-if="loading" class="loading">Chargement…</div>
       <template v-else>
+        <div v-if="handoffBadge" class="handoff-badge">✓ {{ handoffBadge }}</div>
         <div v-if="bikes.length" class="connection-badges">
           <span v-if="apiKey" class="connection-badge">✓ Intervals.icu</span>
           <span v-if="stravaConnected" class="connection-badge strava-badge">✓ Strava</span>
@@ -162,6 +203,7 @@ function triggerImport() {
         <button v-if="stravaConnected" type="button" class="btn secondary" @click="loadStravaActivities">Actualiser Strava</button>
         <button type="button" class="btn secondary" @click="downloadExport">Exporter mes données</button>
         <button type="button" class="btn secondary" @click="triggerImport">Importer</button>
+        <button type="button" class="btn secondary" @click="showHandoff = true">Ouvrir sur mon téléphone</button>
         <button v-if="authToken" type="button" class="btn secondary" @click="logout">Se déconnecter</button>
         <button v-else type="button" class="btn secondary" @click="showAuth = true">Se connecter</button>
       </div>
@@ -359,6 +401,14 @@ function triggerImport() {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+.handoff-badge {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ok, #16a34a);
+  margin-bottom: 0.75rem;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .auth-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
 .auth-badge {
   font-size: 0.78rem;

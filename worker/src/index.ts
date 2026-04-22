@@ -86,6 +86,15 @@ export default {
       return handleAuthVerify(request, env)
     }
 
+    if (request.method === 'POST' && pathname === '/handoff') {
+      return handleHandoffCreate(request, env)
+    }
+
+    if (request.method === 'GET' && pathname.startsWith('/handoff/')) {
+      const token = pathname.slice('/handoff/'.length)
+      return handleHandoffRedeem(token, env)
+    }
+
     if (request.method === 'GET' && pathname === '/strava/auth') {
       return handleStravaAuth(request, env)
     }
@@ -143,6 +152,53 @@ async function handleProfileSave(request: Request, env: Env): Promise<Response> 
   }
   await env.ALERT_STORE.put(`profile:${userId}`, JSON.stringify({ ...body, userId }))
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+}
+
+// --- Handoff (QR code device transfer) ---
+
+async function handleHandoffCreate(request: Request, env: Env): Promise<Response> {
+  const authedUserId = await getUserIdFromRequest(request, env)
+  const body = await request.json() as { userId?: string; sessionToken?: string }
+  const userId = authedUserId ?? body.userId
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: CORS })
+  }
+
+  // Pull current profile snapshot
+  const profileRaw = await env.ALERT_STORE.get(`profile:${userId}`)
+
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(24)))
+    .map(b => b.toString(16).padStart(2, '0')).join('')
+
+  const appUrl = env.APP_URL ?? 'http://localhost:5173'
+  const handoffUrl = `${appUrl}?handoff=${token}`
+
+  // Store: sessionToken (if JWT auth) + profile snapshot, 5min TTL
+  const sessionToken = extractBearer(request) ?? body.sessionToken ?? ''
+  await env.ALERT_STORE.put(
+    `handoff:${token}`,
+    JSON.stringify({ userId, sessionToken, profileSnapshot: profileRaw ? JSON.parse(profileRaw) : null }),
+    { expirationTtl: 300 }
+  )
+
+  return new Response(JSON.stringify({ handoffUrl }), { status: 200, headers: CORS })
+}
+
+async function handleHandoffRedeem(token: string, env: Env): Promise<Response> {
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'Token manquant' }), { status: 400, headers: CORS })
+  }
+
+  const raw = await env.ALERT_STORE.get(`handoff:${token}`)
+  if (!raw) {
+    return new Response(JSON.stringify({ error: 'Token invalide ou expiré' }), { status: 404, headers: CORS })
+  }
+
+  // One-time use — delete immediately
+  await env.ALERT_STORE.delete(`handoff:${token}`)
+
+  const data = JSON.parse(raw) as { userId: string; sessionToken: string; profileSnapshot: unknown }
+  return new Response(JSON.stringify(data), { status: 200, headers: CORS })
 }
 
 async function handleProfileGet(userId: string, env: Env): Promise<Response> {

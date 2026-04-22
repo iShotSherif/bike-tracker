@@ -101,13 +101,17 @@ function toggleHistory(id: string) {
 }
 
 // ── status helpers ────────────────────────────────────────────────────────────
+function kmStartFor(c: BikeComponent): number {
+  return kmAtDate(props.bikeId, c.dateStarted)
+}
+
 function status(c: BikeComponent) {
-  return componentStatus(c, currentKmFromActivities.value)
+  return componentStatus(c, currentKmFromActivities.value, kmStartFor(c))
 }
 
 function kmLeft(c: BikeComponent): number {
   if (!c.intervalKm) return 0
-  return Math.max(0, c.intervalKm - kmSinceStart(c, currentKmFromActivities.value))
+  return Math.max(0, c.intervalKm - kmSinceStart(c, currentKmFromActivities.value, kmStartFor(c)))
 }
 
 function daysLeft(c: BikeComponent): number | null {
@@ -125,7 +129,7 @@ function statusText(c: BikeComponent): string {
   const s = status(c)
   const lines: string[] = []
   if (c.intervalKm) {
-    const used = Math.floor(kmSinceStart(c, currentKmFromActivities.value))
+    const used = Math.floor(kmSinceStart(c, currentKmFromActivities.value, kmStartFor(c)))
     const left = Math.floor(kmLeft(c))
     if (s === 'overdue' && used >= c.intervalKm) lines.push(`${used} km — Service now!`)
     else lines.push(`${left} km left (${used}/${c.intervalKm})`)
@@ -139,7 +143,7 @@ function statusText(c: BikeComponent): string {
 }
 
 function pct(c: BikeComponent): number {
-  return progressPct(c, currentKmFromActivities.value)
+  return progressPct(c, currentKmFromActivities.value, kmStartFor(c))
 }
 
 function sinceText(c: BikeComponent): string {

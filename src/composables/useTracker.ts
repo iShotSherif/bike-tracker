@@ -149,7 +149,7 @@ async function syncToWorker(): Promise<void> {
       componentName: item.component.name,
       bikeName: item.bikeName,
       status: item.status as 'overdue' | 'soon',
-      detail: alertDetail(item.component, kmAtDate(item.bikeId, todayISO())),
+      detail: alertDetail(item.component, kmAtDate(item.bikeId, todayISO()), kmAtDate(item.bikeId, item.component.dateStarted)),
     })),
   }
   try {
@@ -360,12 +360,15 @@ function kmAtDate(bikeId: string, date: string): number {
 const alertComponents = computed(() =>
   bikes.value.flatMap((bike) => {
     const km = kmAtDate(bike.id, todayISO())
-    return getComponentsForBike(bike.id).map((c) => ({
-      component: c,
-      bikeId: bike.id,
-      bikeName: bike.name,
-      status: componentStatus(c, km),
-    }))
+    return getComponentsForBike(bike.id).map((c) => {
+      const kmStart = kmAtDate(bike.id, c.dateStarted)
+      return {
+        component: c,
+        bikeId: bike.id,
+        bikeName: bike.name,
+        status: componentStatus(c, km, kmStart),
+      }
+    })
   })
   .filter((i) => i.status !== 'ok')
   .sort((a, b) => {

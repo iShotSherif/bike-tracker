@@ -11,7 +11,7 @@ const { alertComponents, kmAtDate, markComponentDone, serviceLog, bikes } = useT
 import NotificationSettingsPanel from '@/components/NotificationSettings.vue'
 
 function alertDetail(bikeId: string, c: Parameters<typeof _alertDetail>[0]): string {
-  return _alertDetail(c, kmAtDate(bikeId, todayISO()))
+  return _alertDetail(c, kmAtDate(bikeId, todayISO()), kmAtDate(bikeId, c.dateStarted))
 }
 
 const doneIds = ref<Set<string>>(new Set())

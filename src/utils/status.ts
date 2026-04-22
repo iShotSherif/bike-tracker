@@ -3,8 +3,9 @@ import { todayISO } from './date'
 
 export const TIME_SOON_DAYS = 30
 
-export function kmSinceStart(c: BikeComponent, currentKm: number): number {
-  return Math.max(0, currentKm - c.kmAtStart)
+export function kmSinceStart(c: BikeComponent, currentKm: number, kmAtStart?: number): number {
+  const base = kmAtStart ?? c.kmAtStart
+  return Math.max(0, currentKm - base)
 }
 
 export function daysUntilAlert(c: BikeComponent): number | null {
@@ -17,11 +18,11 @@ export function daysUntilAlert(c: BikeComponent): number | null {
 
 export type ComponentStatus = 'ok' | 'watch' | 'soon' | 'overdue'
 
-export function componentStatus(c: BikeComponent, currentKm: number): ComponentStatus {
+export function componentStatus(c: BikeComponent, currentKm: number, kmAtStart?: number): ComponentStatus {
   let status: ComponentStatus = 'ok'
 
   if (c.intervalKm) {
-    const used = kmSinceStart(c, currentKm)
+    const used = kmSinceStart(c, currentKm, kmAtStart)
     const pct = used / c.intervalKm
     const until = c.intervalKm - used
     if (until <= 0) return 'overdue'
@@ -41,10 +42,10 @@ export function componentStatus(c: BikeComponent, currentKm: number): ComponentS
   return status
 }
 
-export function alertDetail(c: BikeComponent, currentKm: number): string {
+export function alertDetail(c: BikeComponent, currentKm: number, kmAtStart?: number): string {
   const parts: string[] = []
   if (c.intervalKm) {
-    const used = Math.floor(kmSinceStart(c, currentKm))
+    const used = Math.floor(kmSinceStart(c, currentKm, kmAtStart))
     const left = c.intervalKm - used
     if (left <= 0) parts.push(`${Math.abs(left)} km de retard`)
     else parts.push(`${left} km restants`)
@@ -57,11 +58,11 @@ export function alertDetail(c: BikeComponent, currentKm: number): string {
   return parts.join('  ·  ')
 }
 
-export function progressPct(c: BikeComponent, currentKm: number): number {
+export function progressPct(c: BikeComponent, currentKm: number, kmAtStart?: number): number {
   let pct = 0
 
   if (c.intervalKm) {
-    const used = kmSinceStart(c, currentKm)
+    const used = kmSinceStart(c, currentKm, kmAtStart)
     pct = Math.max(pct, Math.min(100, (used / c.intervalKm) * 100))
   }
 

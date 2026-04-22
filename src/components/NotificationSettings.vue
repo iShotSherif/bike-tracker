@@ -89,7 +89,7 @@ function save() {
         componentName: item.component.name,
         bikeName: item.bikeName,
         status: item.status,
-        detail: alertDetail(item.component, kmAtDate(item.bikeId, todayISO())),
+        detail: alertDetail(item.component, kmAtDate(item.bikeId, todayISO()), kmAtDate(item.bikeId, item.component.dateStarted)),
       })),
     }
     fetch(`${workerUrl}/sync`, {

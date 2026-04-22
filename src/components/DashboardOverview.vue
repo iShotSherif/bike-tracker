@@ -11,7 +11,7 @@ const soonItems = computed(() => alertComponents.value.filter((i) => i.status ==
 const watchItems = computed(() => alertComponents.value.filter((i) => i.status === 'watch'))
 
 function alertDetail(bikeId: string, c: Parameters<typeof _alertDetail>[0]): string {
-  return _alertDetail(c, kmAtDate(bikeId, todayISO()))
+  return _alertDetail(c, kmAtDate(bikeId, todayISO()), kmAtDate(bikeId, c.dateStarted))
 }
 
 function scrollToBike(bikeId: string) {

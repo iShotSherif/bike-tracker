@@ -69,6 +69,7 @@ export interface SyncPayload {
 /** Persisted state (localStorage). */
 export interface TrackerState {
   apiKey: string
+  authToken?: string
   stravaConnected?: boolean
   componentsByBike: Record<string, BikeComponent[]>
   serviceLog: ServiceLogEntry[]

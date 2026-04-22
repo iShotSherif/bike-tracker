@@ -14,4 +14,5 @@ preview_id = "96419864e447423583ec514024ee600b"
 VAPID_PUBLIC_KEY = "2LFPJP-rTGpdLJ6AFKZ1ZE0VDIFAmoQQLb73yuBkYbE6nRmz-gEGvNIeCpgaJ93wNj7PYA870hIgpGtnCyFmmg"
 VAPID_SUBJECT = "mailto:pruvotpaul@gmail.com"
 STRAVA_REDIRECT_URI = "https://bike-tracker-worker.componenttracker.workers.dev/strava/callback"
-# Secrets (set via wrangler secret put): VAPID_PRIVATE_KEY, RESEND_API_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET
+APP_URL = "http://localhost:5173"
+# Secrets (set via wrangler secret put): VAPID_PRIVATE_KEY, RESEND_API_KEY, STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET, JWT_SECRET

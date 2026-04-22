@@ -6,7 +6,9 @@ interface Env {
   VAPID_SUBJECT: string
   STRAVA_CLIENT_ID: string
   STRAVA_CLIENT_SECRET: string
-  STRAVA_REDIRECT_URI: string  // e.g. https://bike-tracker-worker.componenttracker.workers.dev/strava/callback
+  STRAVA_REDIRECT_URI: string
+  JWT_SECRET: string  // random 32-byte hex, set via: wrangler secret put JWT_SECRET
+  APP_URL: string     // e.g. https://yourdomain.com (no trailing slash)
 }
 
 interface PushSubscription {
@@ -76,6 +78,14 @@ export default {
       return handleProfileGet(userId, env)
     }
 
+    if (request.method === 'POST' && pathname === '/auth/request') {
+      return handleAuthRequest(request, env)
+    }
+
+    if (request.method === 'POST' && pathname === '/auth/verify') {
+      return handleAuthVerify(request, env)
+    }
+
     if (request.method === 'GET' && pathname === '/strava/auth') {
       return handleStravaAuth(request, env)
     }
@@ -119,16 +129,19 @@ async function handleSync(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleProfileSave(request: Request, env: Env): Promise<Response> {
+  // Accept JWT auth (magic link) or fall back to userId in body (legacy API key flow)
+  const authedUserId = await getUserIdFromRequest(request, env)
   let body: ProfilePayload
   try {
     body = await request.json() as ProfilePayload
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: CORS })
   }
-  if (!body.userId) {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+  const userId = authedUserId ?? body.userId
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: CORS })
   }
-  await env.ALERT_STORE.put(`profile:${body.userId}`, JSON.stringify(body))
+  await env.ALERT_STORE.put(`profile:${userId}`, JSON.stringify({ ...body, userId }))
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
 }
 
@@ -141,6 +154,116 @@ async function handleProfileGet(userId: string, env: Env): Promise<Response> {
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
   }
   return new Response(raw, { status: 200, headers: CORS })
+}
+
+// --- JWT helpers (HS256 via HMAC-SHA256) ---
+
+function b64url(buf: ArrayBuffer | Uint8Array): string {
+  const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+async function signJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
+  const header = b64url(new TextEncoder().encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })))
+  const body = b64url(new TextEncoder().encode(JSON.stringify(payload)))
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${body}`))
+  return `${header}.${body}.${b64url(sig)}`
+}
+
+async function verifyJwt(token: string, secret: string): Promise<Record<string, unknown> | null> {
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+  )
+  const padding = (s: string) => s + '='.repeat((4 - s.length % 4) % 4)
+  const sigBytes = Uint8Array.from(atob(padding(parts[2]).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+  const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(`${parts[0]}.${parts[1]}`))
+  if (!valid) return null
+  try {
+    const payload = JSON.parse(atob(padding(parts[1]).replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, unknown>
+    if (typeof payload.exp === 'number' && Date.now() / 1000 > payload.exp) return null
+    return payload
+  } catch { return null }
+}
+
+async function hashEmail(email: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email.toLowerCase().trim()))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 24)
+}
+
+function extractBearer(request: Request): string | null {
+  const auth = request.headers.get('Authorization') ?? ''
+  return auth.startsWith('Bearer ') ? auth.slice(7) : null
+}
+
+async function getUserIdFromRequest(request: Request, env: Env): Promise<string | null> {
+  const token = extractBearer(request)
+  if (!token) return null
+  const payload = await verifyJwt(token, env.JWT_SECRET)
+  return payload?.userId as string | null
+}
+
+// --- Auth endpoints ---
+
+async function handleAuthRequest(request: Request, env: Env): Promise<Response> {
+  const { email } = await request.json() as { email?: string }
+  if (!email || !email.includes('@')) {
+    return new Response(JSON.stringify({ error: 'Email invalide' }), { status: 400, headers: CORS })
+  }
+
+  const otp = String(Math.floor(100000 + Math.random() * 900000))
+  const userId = await hashEmail(email)
+  await env.ALERT_STORE.put(`otp:${userId}`, otp, { expirationTtl: 900 }) // 15 min
+
+  const appUrl = env.APP_URL ?? 'http://localhost:5173'
+  const magicLink = `${appUrl}?otp=${otp}&email=${encodeURIComponent(email)}`
+
+  await sendEmail(
+    env.RESEND_API_KEY,
+    email,
+    'Ton lien de connexion — Ride & Maintain',
+    `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;background:#f7f5f2">
+      <div style="background:#fff;border-radius:12px;padding:24px;border:1px solid #e5e0d8">
+        <h2 style="color:#e85d26;margin:0 0 16px;font-size:20px">Ride &amp; Maintain</h2>
+        <p style="margin:0 0 20px;color:#44403c">Ton code de connexion :</p>
+        <div style="font-size:36px;font-weight:700;letter-spacing:0.15em;color:#e85d26;margin:0 0 20px">${otp}</div>
+        <p style="margin:0 0 16px;color:#44403c">Ou clique directement :</p>
+        <a href="${magicLink}" style="display:inline-block;background:#e85d26;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Connexion automatique</a>
+        <p style="margin:20px 0 0;font-size:12px;color:#a8a29e">Valable 15 minutes. Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
+      </div>
+    </div>`
+  )
+
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+}
+
+async function handleAuthVerify(request: Request, env: Env): Promise<Response> {
+  const { email, otp } = await request.json() as { email?: string; otp?: string }
+  if (!email || !otp) {
+    return new Response(JSON.stringify({ error: 'Champs manquants' }), { status: 400, headers: CORS })
+  }
+
+  const userId = await hashEmail(email)
+  const stored = await env.ALERT_STORE.get(`otp:${userId}`)
+  if (!stored || stored !== otp.trim()) {
+    return new Response(JSON.stringify({ error: 'Code invalide ou expiré' }), { status: 401, headers: CORS })
+  }
+
+  await env.ALERT_STORE.delete(`otp:${userId}`)
+
+  const token = await signJwt(
+    { userId, email, iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 86400 },
+    env.JWT_SECRET
+  )
+
+  return new Response(JSON.stringify({ token, userId }), { status: 200, headers: CORS })
 }
 
 // --- Strava OAuth ---

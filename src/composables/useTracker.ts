@@ -49,6 +49,7 @@ function saveState(state: Partial<TrackerState>): void {
 }
 
 const apiKey = ref<string>(loadState().apiKey ?? '')
+const authToken = ref<string>(loadState().authToken ?? '')
 const stravaConnected = ref<boolean>(loadState().stravaConnected ?? false)
 const athlete = ref<IntervalsAthlete | null>(null)
 const activities = ref<IntervalsActivity[]>([])
@@ -71,6 +72,7 @@ const userId = computed<string>(() =>
 function persist(): void {
   saveState({
     apiKey: apiKey.value,
+    authToken: authToken.value || undefined,
     stravaConnected: stravaConnected.value,
     componentsByBike: componentsByBike.value,
     serviceLog: serviceLog.value,
@@ -196,6 +198,12 @@ function importState(json: string): void {
   }
 }
 
+function authHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (authToken.value) h['Authorization'] = `Bearer ${authToken.value}`
+  return h
+}
+
 // Cloud profile sync — saves/restores full state (components + serviceLog) keyed by userId
 async function pushProfileToCloud(): Promise<void> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
@@ -203,7 +211,7 @@ async function pushProfileToCloud(): Promise<void> {
   try {
     await fetch(`${workerUrl}/profile`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({
         userId: userId.value,
         componentsByBike: componentsByBike.value,
@@ -218,7 +226,7 @@ async function pullProfileFromCloud(): Promise<boolean> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
   if (!workerUrl || !userId.value) return false
   try {
-    const res = await fetch(`${workerUrl}/profile/${userId.value}`)
+    const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: authHeaders() })
     if (!res.ok) return false
     const data = await res.json() as Partial<TrackerState>
     if (data.componentsByBike) componentsByBike.value = data.componentsByBike
@@ -227,6 +235,29 @@ async function pullProfileFromCloud(): Promise<boolean> {
     persist()
     return true
   } catch { return false }
+}
+
+async function login(email: string, otp: string): Promise<boolean> {
+  const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+  if (!workerUrl) return false
+  try {
+    const res = await fetch(`${workerUrl}/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp }),
+    })
+    if (!res.ok) return false
+    const data = await res.json() as { token: string; userId: string }
+    authToken.value = data.token
+    persist()
+    await pullProfileFromCloud()
+    return true
+  } catch { return false }
+}
+
+function logout(): void {
+  authToken.value = ''
+  persist()
 }
 
 function connectStrava(): void {
@@ -376,5 +407,8 @@ export function useTracker() {
     stravaConnected,
     connectStrava,
     loadStravaActivities,
+    authToken,
+    login,
+    logout,
   }
 }

@@ -4,27 +4,45 @@ import { useTracker } from '@/composables/useTracker'
 import BikeCard from '@/components/BikeCard.vue'
 import DashboardOverview from '@/components/DashboardOverview.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
+import AuthScreen from '@/components/AuthScreen.vue'
 
-const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete, stravaConnected, connectStrava, loadStravaActivities } = useTracker()
+const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete, stravaConnected, connectStrava, loadStravaActivities, authToken, login, logout } = useTracker()
 
 const keyInput = ref('')
 const showKey = ref(false)
 const importError = ref('')
+const showAuth = ref(false)
 
 watch(apiKey, (v) => { keyInput.value = v }, { immediate: true })
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
+
+  // Magic link auto-login via URL params
+  const urlOtp = params.get('otp')
+  const urlEmail = params.get('email')
+  if (urlOtp && urlEmail) {
+    window.history.replaceState({}, '', window.location.pathname)
+    const ok = await login(urlEmail, urlOtp)
+    if (ok && apiKey.value.trim()) await loadAthlete()
+    return
+  }
+
   if (params.get('strava') === 'connected') {
-    // Clean URL without reload
     window.history.replaceState({}, '', window.location.pathname)
     await loadStravaActivities()
-  } else if (apiKey.value.trim()) {
+    return
+  }
+
+  if (apiKey.value.trim()) {
     await loadAthlete()
-    // If Strava was previously connected, load those activities too
     if (stravaConnected.value) await loadStravaActivities()
   }
 })
+
+function onAuthDone() {
+  showAuth.value = false
+}
 
 function saveKey() {
   setApiKey(keyInput.value.trim())
@@ -70,7 +88,9 @@ function triggerImport() {
       </div>
     </header>
 
-    <section v-if="!athlete && !loading" class="setup">
+    <AuthScreen v-if="showAuth" @done="onAuthDone" />
+
+    <section v-else-if="!athlete && !loading" class="setup">
       <div class="source-options">
         <div class="key-section">
           <label for="api-key">Intervals.icu</label>
@@ -108,6 +128,12 @@ function triggerImport() {
         </div>
       </div>
 
+      <div class="auth-row">
+        <span v-if="authToken" class="auth-badge">✓ Connecté</span>
+        <button v-else type="button" class="btn btn-link" @click="showAuth = true">
+          Se connecter pour sync multi-appareils →
+        </button>
+      </div>
       <button type="button" class="btn btn-link" @click="skipConnection">
         Continuer sans connexion →
       </button>
@@ -136,6 +162,8 @@ function triggerImport() {
         <button v-if="stravaConnected" type="button" class="btn secondary" @click="loadStravaActivities">Actualiser Strava</button>
         <button type="button" class="btn secondary" @click="downloadExport">Exporter mes données</button>
         <button type="button" class="btn secondary" @click="triggerImport">Importer</button>
+        <button v-if="authToken" type="button" class="btn secondary" @click="logout">Se déconnecter</button>
+        <button v-else type="button" class="btn secondary" @click="showAuth = true">Se connecter</button>
       </div>
       <NotificationSettings />
     </section>
@@ -330,5 +358,15 @@ function triggerImport() {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+.auth-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
+.auth-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ok, #16a34a);
+  background: var(--ok-light, #f0fdf4);
+  border: 1.5px solid var(--ok, #16a34a);
+  border-radius: 5px;
+  padding: 0.15rem 0.5rem;
 }
 </style>

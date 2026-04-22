@@ -29,7 +29,7 @@ async function requestOtp() {
     step.value = 'otp'
     startCooldown()
   } catch {
-    errorMsg.value = 'Impossible d'envoyer l'email. Vérifie ta connexion.'
+    errorMsg.value = `Impossible d'envoyer l'email. Vérifie ta connexion.`
   } finally {
     loading.value = false
   }
@@ -42,7 +42,7 @@ async function verifyOtp() {
   try {
     const ok = await login(email.value.trim(), otp.value.trim())
     if (!ok) {
-      errorMsg.value = 'Code invalide ou expiré. Réessaie.'
+      errorMsg.value = `Code invalide ou expiré. Réessaie.`
     } else {
       emit('done')
     }
@@ -80,7 +80,7 @@ function startCooldown() {
           />
         </div>
         <button class="btn btn-primary" :disabled="loading || !email.trim()" @click="requestOtp">
-          {{ loading ? 'Envoi…' : 'M\'envoyer un lien de connexion' }}
+          {{ loading ? 'Envoi…' : "M'envoyer un lien de connexion" }}
         </button>
       </template>
 

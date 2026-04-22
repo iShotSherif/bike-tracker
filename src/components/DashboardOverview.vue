@@ -8,6 +8,7 @@ const { alertComponents, kmAtDate } = useTracker()
 
 const overdueItems = computed(() => alertComponents.value.filter((i) => i.status === 'overdue'))
 const soonItems = computed(() => alertComponents.value.filter((i) => i.status === 'soon'))
+const watchItems = computed(() => alertComponents.value.filter((i) => i.status === 'watch'))
 
 function alertDetail(bikeId: string, c: Parameters<typeof _alertDetail>[0]): string {
   return _alertDetail(c, kmAtDate(bikeId, todayISO()))
@@ -24,9 +25,9 @@ function scrollToBike(bikeId: string) {
 
 <template>
   <section v-if="alertComponents.length" class="dashboard">
-    <h2 class="dashboard-title">Needs attention</h2>
+    <h2 class="dashboard-title">À surveiller</h2>
     <div v-if="overdueItems.length" class="dashboard-group">
-      <h3 class="group-label overdue-label">Overdue</h3>
+      <h3 class="group-label overdue-label">À remplacer</h3>
       <div
         v-for="item in overdueItems"
         :key="item.component.id"
@@ -39,7 +40,7 @@ function scrollToBike(bikeId: string) {
       </div>
     </div>
     <div v-if="soonItems.length" class="dashboard-group">
-      <h3 class="group-label soon-label">Due soon</h3>
+      <h3 class="group-label soon-label">À contrôler</h3>
       <div
         v-for="item in soonItems"
         :key="item.component.id"
@@ -51,10 +52,23 @@ function scrollToBike(bikeId: string) {
         <span class="alert-detail">{{ alertDetail(item.bikeId, item.component) }}</span>
       </div>
     </div>
+    <div v-if="watchItems.length" class="dashboard-group">
+      <h3 class="group-label watch-label">À surveiller</h3>
+      <div
+        v-for="item in watchItems"
+        :key="item.component.id"
+        class="alert-item watch-item"
+        @click="scrollToBike(item.bikeId)"
+      >
+        <span class="alert-name">{{ item.component.name }}</span>
+        <span class="alert-bike">{{ item.bikeName }}</span>
+        <span class="alert-detail">{{ alertDetail(item.bikeId, item.component) }}</span>
+      </div>
+    </div>
   </section>
   <section v-else class="dashboard dashboard-ok">
     <span class="ok-dot"></span>
-    <span class="ok-badge">All components OK</span>
+    <span class="ok-badge">Tous les composants sont OK</span>
   </section>
 </template>
 
@@ -86,6 +100,7 @@ function scrollToBike(bikeId: string) {
 }
 .overdue-label { color: var(--danger); }
 .soon-label { color: var(--warning); }
+.watch-label { color: #ca8a04; }
 
 .alert-item {
   display: flex;
@@ -102,6 +117,8 @@ function scrollToBike(bikeId: string) {
 .overdue-item:hover { filter: brightness(0.97); }
 .soon-item { background: var(--warning-light); border-left: 3px solid var(--warning); }
 .soon-item:hover { filter: brightness(0.97); }
+.watch-item { background: #fefce8; border-left: 3px solid #eab308; }
+.watch-item:hover { filter: brightness(0.97); }
 .alert-name { font-weight: 600; min-width: 8rem; }
 .alert-bike { color: var(--muted); font-size: 0.83rem; min-width: 6rem; }
 .alert-detail { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); margin-left: auto; }
@@ -112,15 +129,6 @@ function scrollToBike(bikeId: string) {
   gap: 0.5rem;
   padding: 0.5rem 0.25rem;
 }
-.ok-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--ok);
-  flex-shrink: 0;
-}
-.ok-badge {
-  font-size: 0.85rem;
-  color: var(--ok);
-  font-weight: 600;
-}
+.ok-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
+.ok-badge { font-size: 0.85rem; color: var(--ok); font-weight: 600; }
 </style>

@@ -15,20 +15,27 @@ export function daysUntilAlert(c: BikeComponent): number | null {
   return c.intervalDays - elapsed
 }
 
-export function componentStatus(c: BikeComponent, currentKm: number): 'ok' | 'soon' | 'overdue' {
-  let status: 'ok' | 'soon' | 'overdue' = 'ok'
+export type ComponentStatus = 'ok' | 'watch' | 'soon' | 'overdue'
+
+export function componentStatus(c: BikeComponent, currentKm: number): ComponentStatus {
+  let status: ComponentStatus = 'ok'
 
   if (c.intervalKm) {
     const used = kmSinceStart(c, currentKm)
+    const pct = used / c.intervalKm
     const until = c.intervalKm - used
     if (until <= 0) return 'overdue'
-    if (until <= c.intervalKm * 0.15) status = 'soon'
+    if (pct >= 0.90) status = 'soon'
+    else if (pct >= 0.80 && status === 'ok') status = 'watch'
   }
 
   if (c.intervalDays) {
     const until = daysUntilAlert(c)!
+    const elapsed = c.intervalDays - until
+    const pct = elapsed / c.intervalDays
     if (until <= 0) return 'overdue'
-    if (until <= TIME_SOON_DAYS) status = 'soon'
+    if (pct >= 0.90) status = 'soon'
+    else if (pct >= 0.80 && status === 'ok') status = 'watch'
   }
 
   return status
@@ -39,13 +46,13 @@ export function alertDetail(c: BikeComponent, currentKm: number): string {
   if (c.intervalKm) {
     const used = Math.floor(kmSinceStart(c, currentKm))
     const left = c.intervalKm - used
-    if (left <= 0) parts.push(`${Math.abs(left)} km overdue`)
-    else parts.push(`${left} km left`)
+    if (left <= 0) parts.push(`${Math.abs(left)} km de retard`)
+    else parts.push(`${left} km restants`)
   }
   if (c.intervalDays) {
     const left = daysUntilAlert(c)!
-    if (left <= 0) parts.push(`${Math.abs(left)} days overdue`)
-    else parts.push(`${left} days left`)
+    if (left <= 0) parts.push(`${Math.abs(left)} jours de retard`)
+    else parts.push(`${left} jours restants`)
   }
   return parts.join('  ·  ')
 }

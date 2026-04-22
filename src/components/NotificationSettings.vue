@@ -3,6 +3,8 @@ import { ref, watch, computed } from 'vue'
 import { useTracker } from '@/composables/useTracker'
 import type { NotificationSettings } from '@/types'
 
+const props = defineProps<{ inline?: boolean }>()
+
 const { notificationSettings, setNotificationSettings, userId, alertComponents, kmAtDate } = useTracker()
 import { alertDetail } from '@/utils/status'
 import { todayISO } from '@/utils/date'
@@ -136,13 +138,13 @@ async function sendTest() {
 
 <template>
   <section class="notif-panel">
-    <button type="button" class="notif-toggle" @click="open = !open">
+    <button v-if="!props.inline" type="button" class="notif-toggle" @click="open = !open">
       <span class="notif-icon">🔔</span>
       Mes alertes
       <span class="chevron">{{ open ? '▲' : '▼' }}</span>
     </button>
 
-    <div v-if="open" class="notif-body">
+    <div v-if="props.inline || open" class="notif-body" :class="{ 'notif-body-inline': props.inline }">
       <div class="field">
         <label class="field-label">Email</label>
         <input
@@ -247,6 +249,7 @@ async function sendTest() {
   flex-direction: column;
   gap: 1rem;
 }
+.notif-body-inline { border-top: none; }
 
 .field { display: flex; flex-direction: column; gap: 0.3rem; }
 .field-label {

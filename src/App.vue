@@ -6,8 +6,9 @@ import DashboardOverview from '@/components/DashboardOverview.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 import AuthScreen from '@/components/AuthScreen.vue'
 import HandoffModal from '@/components/HandoffModal.vue'
+import AlertsView from '@/components/AlertsView.vue'
 
-const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete, stravaConnected, connectStrava, loadStravaActivities, authToken, login, logout } = useTracker()
+const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete, stravaConnected, connectStrava, loadStravaActivities, authToken, login, logout, alertComponents } = useTracker()
 
 const keyInput = ref('')
 const showKey = ref(false)
@@ -15,6 +16,7 @@ const importError = ref('')
 const showAuth = ref(false)
 const showHandoff = ref(false)
 const handoffBadge = ref('')
+const currentView = ref<'dashboard' | 'alerts'>('dashboard')
 
 watch(apiKey, (v) => { keyInput.value = v }, { immediate: true })
 
@@ -190,14 +192,36 @@ function triggerImport() {
           <span v-if="stravaConnected" class="connection-badge strava-badge">✓ Strava</span>
           <span class="badge-detail">— {{ bikes.length }} vélo{{ bikes.length > 1 ? 's' : '' }} trouvé{{ bikes.length > 1 ? 's' : '' }}</span>
         </div>
-        <DashboardOverview />
-        <div class="bike-grid">
-          <BikeCard v-for="bike in bikes" :key="bike.id" :bike="bike" :id="`bike-${bike.id}`" />
-          <div v-if="!bikes.length" class="empty-state">
-            <p>Aucun vélo connecté. <button type="button" class="btn btn-link" @click="resetAthlete">Connecter Intervals.icu</button></p>
+
+        <nav class="tabs">
+          <button
+            :class="['tab', { active: currentView === 'dashboard' }]"
+            @click="currentView = 'dashboard'"
+          >
+            Mes vélos
+          </button>
+          <button
+            :class="['tab', { active: currentView === 'alerts' }]"
+            @click="currentView = 'alerts'"
+          >
+            Alertes
+            <span v-if="alertComponents.length" class="tab-badge">{{ alertComponents.length }}</span>
+          </button>
+        </nav>
+
+        <template v-if="currentView === 'dashboard'">
+          <DashboardOverview />
+          <div class="bike-grid">
+            <BikeCard v-for="bike in bikes" :key="bike.id" :bike="bike" :id="`bike-${bike.id}`" />
+            <div v-if="!bikes.length" class="empty-state">
+              <p>Aucun vélo connecté. <button type="button" class="btn btn-link" @click="resetAthlete">Connecter Intervals.icu</button></p>
+            </div>
           </div>
-        </div>
+        </template>
+
+        <AlertsView v-else-if="currentView === 'alerts'" />
       </template>
+
       <div class="footer-actions">
         <button v-if="apiKey" type="button" class="btn secondary" @click="loadAthlete">Actualiser Intervals.icu</button>
         <button v-if="stravaConnected" type="button" class="btn secondary" @click="loadStravaActivities">Actualiser Strava</button>
@@ -207,7 +231,6 @@ function triggerImport() {
         <button v-if="authToken" type="button" class="btn secondary" @click="logout">Se déconnecter</button>
         <button v-else type="button" class="btn secondary" @click="showAuth = true">Se connecter</button>
       </div>
-      <NotificationSettings />
     </section>
   </div>
 </template>
@@ -400,6 +423,44 @@ function triggerImport() {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 0;
+}
+.tab {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: color 0.12s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 .handoff-badge {
   font-size: 0.82rem;

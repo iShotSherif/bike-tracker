@@ -5,7 +5,7 @@ import BikeCard from '@/components/BikeCard.vue'
 import DashboardOverview from '@/components/DashboardOverview.vue'
 import NotificationSettings from '@/components/NotificationSettings.vue'
 
-const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud } = useTracker()
+const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete } = useTracker()
 
 const keyInput = ref('')
 const showKey = ref(false)
@@ -55,7 +55,7 @@ function triggerImport() {
       <div class="header-icon">🚴</div>
       <div class="header-text">
         <h1 class="title">Ride & Maintain</h1>
-        <p class="subtitle">Keep your bikes in shape — track components, log services, stay rolling.</p>
+        <p class="subtitle">Suis tes composants, note tes entretiens, roule sans surprise.</p>
       </div>
     </header>
 
@@ -100,7 +100,7 @@ function triggerImport() {
         <div class="bike-grid">
           <BikeCard v-for="bike in bikes" :key="bike.id" :bike="bike" :id="`bike-${bike.id}`" />
           <div v-if="!bikes.length" class="empty-state">
-            <p>Aucun vélo connecté. <button type="button" class="btn btn-link" @click="athlete = null">Connecter Intervals.icu</button></p>
+            <p>Aucun vélo connecté. <button type="button" class="btn btn-link" @click="resetAthlete">Connecter Intervals.icu</button></p>
           </div>
         </div>
       </template>

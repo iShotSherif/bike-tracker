@@ -227,6 +227,11 @@ async function pullProfileFromCloud(): Promise<boolean> {
   } catch { return false }
 }
 
+function resetAthlete(): void {
+  athlete.value = null
+  activities.value = []
+}
+
 function setApiKey(key: string): void {
   apiKey.value = key
   persist()
@@ -312,5 +317,6 @@ export function useTracker() {
     importState,
     pushProfileToCloud,
     pullProfileFromCloud,
+    resetAthlete,
   }
 }

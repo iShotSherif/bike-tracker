@@ -30,6 +30,13 @@ interface SyncPayload {
   alertComponents: AlertComponentPayload[]
 }
 
+interface ProfilePayload {
+  userId: string
+  componentsByBike: Record<string, unknown[]>
+  serviceLog: unknown[]
+  notificationSettings: NotificationSettings
+}
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Content-Type': 'application/json',
@@ -37,7 +44,7 @@ const CORS = {
 
 const CORS_PREFLIGHT = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
@@ -55,6 +62,15 @@ export default {
 
     if (request.method === 'POST' && pathname === '/test-notify') {
       return handleTestNotify(request, env)
+    }
+
+    if (request.method === 'POST' && pathname === '/profile') {
+      return handleProfileSave(request, env)
+    }
+
+    if (request.method === 'GET' && pathname.startsWith('/profile/')) {
+      const userId = pathname.slice('/profile/'.length)
+      return handleProfileGet(userId, env)
     }
 
     return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
@@ -85,6 +101,31 @@ async function handleSync(request: Request, env: Env): Promise<Response> {
   await env.ALERT_STORE.put(body.userId, JSON.stringify(body), { expirationTtl: 172800 })
 
   return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+}
+
+async function handleProfileSave(request: Request, env: Env): Promise<Response> {
+  let body: ProfilePayload
+  try {
+    body = await request.json() as ProfilePayload
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: CORS })
+  }
+  if (!body.userId) {
+    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+  }
+  await env.ALERT_STORE.put(`profile:${body.userId}`, JSON.stringify(body))
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+}
+
+async function handleProfileGet(userId: string, env: Env): Promise<Response> {
+  if (!userId) {
+    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+  }
+  const raw = await env.ALERT_STORE.get(`profile:${userId}`)
+  if (!raw) {
+    return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
+  }
+  return new Response(raw, { status: 200, headers: CORS })
 }
 
 async function handleTestNotify(request: Request, env: Env): Promise<Response> {

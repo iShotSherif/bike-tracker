@@ -97,7 +97,7 @@ function save() {
     }).catch(() => {})
   }
 
-  saveStatus.value = 'Saved!'
+  saveStatus.value = 'Alertes enregistrées.'
   setTimeout(() => { saveStatus.value = '' }, 2500)
 }
 
@@ -138,7 +138,7 @@ async function sendTest() {
   <section class="notif-panel">
     <button type="button" class="notif-toggle" @click="open = !open">
       <span class="notif-icon">🔔</span>
-      Notification settings
+      Mes alertes
       <span class="chevron">{{ open ? '▲' : '▼' }}</span>
     </button>
 
@@ -149,59 +149,62 @@ async function sendTest() {
           v-model="localEmail"
           type="email"
           class="input"
-          placeholder="you@example.com"
+          placeholder="toi@exemple.com"
         />
       </div>
 
       <div class="field">
-        <label class="field-label">Phone / browser notifications</label>
-        <div v-if="pushStatus === 'unsupported'" class="hint warn">
-          Push notifications are not supported in this browser.
-        </div>
-        <template v-else-if="pushStatus === 'active' || hasPush">
-          <div class="push-active">
-            <span class="push-badge">✓ Push enabled</span>
-            <button type="button" class="btn btn-ghost" @click="disablePush">Disable</button>
+        <label class="field-label">Notifications sur ce téléphone</label>
+        <template v-if="localEmail.trim()">
+          <div v-if="pushStatus === 'unsupported'" class="hint warn">
+            Les notifications push ne sont pas supportées par ce navigateur.
           </div>
+          <template v-else-if="pushStatus === 'active' || hasPush">
+            <div class="push-active">
+              <span class="push-badge">✓ Push activé</span>
+              <button type="button" class="btn btn-ghost" @click="disablePush">Désactiver</button>
+            </div>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              class="btn btn-push"
+              :disabled="pushStatus === 'requesting'"
+              @click="enablePush"
+            >
+              {{ pushStatus === 'requesting' ? 'En cours…' : '🔔 Activer les notifications' }}
+            </button>
+            <p class="hint">Un seul clic — les rappels arrivent directement sur ce téléphone, sans appli à installer.</p>
+          </template>
         </template>
-        <template v-else>
-          <button
-            type="button"
-            class="btn btn-push"
-            :disabled="pushStatus === 'requesting'"
-            @click="enablePush"
-          >
-            {{ pushStatus === 'requesting' ? 'Requesting…' : '🔔 Enable push notifications' }}
-          </button>
-          <p class="hint">One click — notifications arrive directly in your browser or on your phone when using this site as a home screen app.</p>
-        </template>
+        <p v-else class="hint">Entre ton email ci-dessus pour activer les rappels sur ce téléphone.</p>
       </div>
 
       <div class="field">
-        <label class="field-label">Alert level</label>
+        <label class="field-label">Niveau d'alerte</label>
         <div class="toggle-row">
           <button
             type="button"
             :class="['toggle-btn', { active: localLevel === 'soon-and-overdue' }]"
             @click="localLevel = 'soon-and-overdue'"
-          >Overdue + Due soon</button>
+          >Bientôt dû + En retard</button>
           <button
             type="button"
             :class="['toggle-btn', { active: localLevel === 'overdue-only' }]"
             @click="localLevel = 'overdue-only'"
-          >Overdue only</button>
+          >En retard uniquement</button>
         </div>
       </div>
 
       <div class="notif-actions">
-        <button type="button" class="btn btn-primary" @click="save">Save</button>
+        <button type="button" class="btn btn-primary" @click="save">Enregistrer</button>
         <button
           type="button"
           class="btn"
           :disabled="testStatus === 'sending' || (!hasPush && !localEmail.trim())"
           @click="sendTest"
         >
-          {{ testStatus === 'sending' ? 'Sending…' : testStatus === 'ok' ? '✓ Sent!' : testStatus === 'error' ? '✗ Error' : 'Test notification' }}
+          {{ testStatus === 'sending' ? 'Envoi…' : testStatus === 'ok' ? '✓ Envoyé !' : testStatus === 'error' ? '✗ Erreur' : 'Tester' }}
         </button>
         <span v-if="saveStatus" class="save-feedback">{{ saveStatus }}</span>
       </div>

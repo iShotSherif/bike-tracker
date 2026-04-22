@@ -157,6 +157,76 @@ async function syncToWorker(): Promise<void> {
   } catch { /* non-fatal */ }
 }
 
+const DEFAULT_COMPONENTS: Omit<BikeComponent, 'id'>[] = [
+  { name: 'Chaîne', intervalKm: 3000, dateStarted: todayISO(), kmAtStart: 0 },
+  { name: 'Cassette', intervalKm: 9000, dateStarted: todayISO(), kmAtStart: 0 },
+  { name: 'Plaquettes de frein', intervalKm: 1500, dateStarted: todayISO(), kmAtStart: 0 },
+  { name: 'Pneus', intervalKm: 5000, dateStarted: todayISO(), kmAtStart: 0 },
+  { name: 'Câbles de frein', intervalDays: 365, dateStarted: todayISO(), kmAtStart: 0 },
+  { name: 'Révision générale', intervalDays: 180, dateStarted: todayISO(), kmAtStart: 0 },
+]
+
+function initDefaultComponents(bikeId: string): void {
+  if (!componentsByBike.value[bikeId]?.length) {
+    DEFAULT_COMPONENTS.forEach((c) => addComponent(bikeId, c))
+  }
+}
+
+function exportState(): string {
+  return JSON.stringify({
+    apiKey: apiKey.value,
+    componentsByBike: componentsByBike.value,
+    serviceLog: serviceLog.value,
+    notificationSettings: notificationSettings.value,
+  }, null, 2)
+}
+
+function importState(json: string): void {
+  try {
+    const parsed = JSON.parse(json)
+    if (parsed.apiKey) apiKey.value = parsed.apiKey
+    if (parsed.componentsByBike) componentsByBike.value = parsed.componentsByBike
+    if (parsed.serviceLog) serviceLog.value = parsed.serviceLog
+    if (parsed.notificationSettings) notificationSettings.value = parsed.notificationSettings
+    persist()
+  } catch {
+    error.value = 'Fichier invalide.'
+  }
+}
+
+// Cloud profile sync — saves/restores full state (components + serviceLog) keyed by userId
+async function pushProfileToCloud(): Promise<void> {
+  const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+  if (!workerUrl || !userId.value) return
+  try {
+    await fetch(`${workerUrl}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userId.value,
+        componentsByBike: componentsByBike.value,
+        serviceLog: serviceLog.value,
+        notificationSettings: notificationSettings.value,
+      }),
+    })
+  } catch { /* non-fatal */ }
+}
+
+async function pullProfileFromCloud(): Promise<boolean> {
+  const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+  if (!workerUrl || !userId.value) return false
+  try {
+    const res = await fetch(`${workerUrl}/profile/${userId.value}`)
+    if (!res.ok) return false
+    const data = await res.json() as Partial<TrackerState>
+    if (data.componentsByBike) componentsByBike.value = data.componentsByBike
+    if (data.serviceLog) serviceLog.value = data.serviceLog
+    if (data.notificationSettings) notificationSettings.value = data.notificationSettings
+    persist()
+    return true
+  } catch { return false }
+}
+
 function setApiKey(key: string): void {
   apiKey.value = key
   persist()
@@ -164,7 +234,7 @@ function setApiKey(key: string): void {
 
 async function loadAthlete(): Promise<void> {
   if (!apiKey.value.trim()) {
-    error.value = 'Enter your intervals.icu API key'
+    error.value = 'Entre ta clé API Intervals.icu'
     return
   }
   loading.value = true
@@ -174,9 +244,14 @@ async function loadAthlete(): Promise<void> {
     const newest = new Date().toISOString().split('T')[0]
     const oldest = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     activities.value = await fetchActivities(apiKey.value, { oldest, newest, limit: 1000 })
+    // Try to restore profile from cloud first, then fall back to defaults
+    const restored = await pullProfileFromCloud()
+    if (!restored) {
+      bikes.value.forEach((bike) => initDefaultComponents(bike.id))
+    }
     await syncToWorker()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load data'
+    error.value = e instanceof Error ? e.message : 'Impossible de charger les données'
     athlete.value = null
   } finally {
     loading.value = false
@@ -233,5 +308,9 @@ export function useTracker() {
     notificationSettings,
     setNotificationSettings,
     userId,
+    exportState,
+    importState,
+    pushProfileToCloud,
+    pullProfileFromCloud,
   }
 }

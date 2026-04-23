@@ -1,0 +1,230 @@
+{
+  "common": {
+    "language": "Idioma",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "copy": "Copiar",
+    "email": "Correo"
+  },
+  "app": {
+    "title": "Ride & Maintain",
+    "subtitle": "Sigue tus componentes, registra el mantenimiento y rueda sin sorpresas.",
+    "setup": {
+      "or": "o",
+      "intervals": {
+        "label": "Intervals.icu",
+        "placeholder": "Pega tu clave aqui",
+        "connect": "Conectar",
+        "connecting": "Conectando...",
+        "hint": "Acceso de solo lectura. Tus datos solo se usan para calcular recordatorios de mantenimiento.",
+        "findKey": "Donde encuentro mi clave?",
+        "togglePassword": {
+          "show": "Mostrar clave",
+          "hide": "Ocultar clave"
+        }
+      },
+      "strava": {
+        "label": "Strava",
+        "connect": "Conectar Strava",
+        "hint": "Conexion por OAuth - no se guarda ninguna contrasena."
+      },
+      "auth": {
+        "connected": "Conectado",
+        "syncLogin": "Iniciar sesion para sincronizar entre dispositivos ->",
+        "continueWithoutConnection": "Continuar sin conectar ->"
+      }
+    },
+    "badges": {
+      "handoffLoaded": "Perfil cargado en este dispositivo",
+      "intervals": "Intervals.icu",
+      "strava": "Strava",
+      "bikeFoundSingle": "1 bici encontrada",
+      "bikeFoundMultiple": "{count} bicis encontradas"
+    },
+    "tabs": {
+      "bikes": "Mis bicis",
+      "alerts": "Alertas"
+    },
+    "empty": {
+      "noBikes": "No hay bicis conectadas.",
+      "connectIntervals": "Conectar Intervals.icu"
+    },
+    "actions": {
+      "refreshIntervals": "Actualizar Intervals.icu",
+      "refreshStrava": "Actualizar Strava",
+      "export": "Exportar mis datos",
+      "import": "Importar",
+      "openOnPhone": "Abrir en mi telefono",
+      "logout": "Cerrar sesion",
+      "login": "Iniciar sesion"
+    }
+  },
+  "auth": {
+    "title": "Iniciar sesion",
+    "subtitle": "Encuentra tu perfil en cualquier dispositivo.",
+    "emailLabel": "Tu correo electronico",
+    "emailPlaceholder": "tu{'@'}ejemplo.com",
+    "sendLink": "Enviar enlace de acceso",
+    "sending": "Enviando...",
+    "codeSent": "Se envio un codigo de 6 digitos a {email}.",
+    "codeLabel": "Codigo de acceso",
+    "codePlaceholder": "123456",
+    "confirm": "Confirmar",
+    "verifying": "Verificando...",
+    "resend": "Reenviar codigo",
+    "resendIn": "Reenviar ({seconds}s)",
+    "changeEmail": "Cambiar correo",
+    "continueWithoutAccount": "Continuar sin cuenta ->",
+    "requestError": "No pudimos enviar el correo. Revisa tu conexion.",
+    "invalidCode": "Codigo invalido o caducado. Intentalo de nuevo."
+  },
+  "alerts": {
+    "title": "Alertas activas",
+    "emptyOk": "Todos los componentes estan OK",
+    "settingsTitle": "Configuracion de recordatorios",
+    "historyTitle": "Historial de mantenimiento",
+    "emptyHistory": "Todavia no hay mantenimiento registrado.",
+    "markDoneToday": "Hecho hoy",
+    "resetDone": "Reiniciado",
+    "defaultServiceNote": "Mantenimiento",
+    "status": {
+      "ok": "OK",
+      "watch": "Vigilar",
+      "soon": "Revisar pronto",
+      "overdue": "Cambiar ya"
+    },
+    "detail": {
+      "kmOverdue": "{count} km de retraso",
+      "kmRemaining": "{count} km restantes",
+      "daysOverdueSingle": "1 dia de retraso",
+      "daysOverdueMultiple": "{count} dias de retraso",
+      "daysRemainingSingle": "1 dia restante",
+      "daysRemainingMultiple": "{count} dias restantes"
+    }
+  },
+  "bike": {
+    "unnamed": "Bici sin nombre",
+    "totalKm": "{count} km totales"
+  },
+  "dashboard": {
+    "title": "Vigilar",
+    "overdue": "Cambiar ya",
+    "soon": "Revisar pronto",
+    "watch": "Vigilar",
+    "emptyOk": "Todos los componentes estan OK"
+  },
+  "components": {
+    "selectPlaceholder": "Elegir un componente",
+    "selectedPlaceholder": "el componente seleccionado",
+    "names": {
+      "chain": "Cadena",
+      "cassette": "Cassette",
+      "brakePads": "Pastillas de freno",
+      "tires": "Neumaticos",
+      "brakeCables": "Cables de freno",
+      "fullService": "Revision general",
+      "brakeBleed": "Purgado de frenos",
+      "chainrings": "Platos",
+      "bottomBracket": "Caja de pedalier",
+      "brakeRotors": "Discos de freno",
+      "sealant": "Liquido sellante",
+      "freehub": "Nucleo",
+      "chainService": "Mantenimiento de la cadena",
+      "rearSuspension": "Suspension trasera",
+      "frontSuspension": "Suspension delantera"
+    }
+  },
+  "tracker": {
+    "componentNamePlaceholder": "Nombre del componente",
+    "mode": {
+      "km": "km",
+      "days": "Tiempo",
+      "both": "Ambos"
+    },
+    "placeholders": {
+      "kmInterval": "intervalo km",
+      "daysInterval": "dias",
+      "startKm": "km inicial",
+      "notes": "Notas (opcional)"
+    },
+    "titles": {
+      "daysHelp": "ej. 365 = 1 ano, 730 = 2 anos",
+      "startKmHelp": "Calculado automaticamente a partir del historial de actividades",
+      "markDone": "Marcar como hecho",
+      "edit": "Editar ajustes",
+      "remove": "Eliminar"
+    },
+    "actions": {
+      "addComponent": "+ Anadir un componente",
+      "history": "Historial",
+      "add": "Anadir"
+    },
+    "intervalLabel": "Alerta en {parts}",
+    "started": "Iniciado {time}",
+    "serviceNow": "{used} km - mantenimiento ahora",
+    "kmRemaining": "{left} km restantes ({used}/{interval})",
+    "daysOverdueSingle": "1 dia de retraso",
+    "daysOverdueMultiple": "{count} dias de retraso",
+    "daysRemainingSingle": "1 dia restante",
+    "daysRemainingMultiple": "{count} dias restantes",
+    "historyEmpty": "Todavia no hay historial de mantenimiento."
+  },
+  "notifications": {
+    "title": "Mis alertas",
+    "phoneLabel": "Notificaciones en este telefono",
+    "pushUnsupported": "Las notificaciones push no son compatibles con este navegador.",
+    "pushEnabled": "Notificaciones activadas",
+    "disable": "Desactivar",
+    "enable": "Activar notificaciones",
+    "enabling": "Activando...",
+    "pushHint": "Con un clic, los recordatorios llegan directamente a este telefono sin instalar ninguna app.",
+    "emailHint": "Introduce tu correo arriba para activar recordatorios en este telefono.",
+    "alertLevel": "Nivel de alerta",
+    "soonAndOverdue": "Pronto + atrasado",
+    "overdueOnly": "Solo atrasado",
+    "saved": "Alertas guardadas.",
+    "testSending": "Enviando...",
+    "testSuccess": "Enviado!",
+    "testError": "Error",
+    "test": "Probar"
+  },
+  "bikeVisual": {
+    "eyebrow": "Mapa de mantenimiento",
+    "headline": "Mira de un vistazo que necesita atencion antes de tu proxima salida.",
+    "caption": "Los componentes criticos aparecen directamente sobre la bici para una lectura rapida, sin rebuscar en una lista.",
+    "visuals": {
+      "road": "Ruta",
+      "gravel": "Gravel",
+      "mtb": "MTB"
+    },
+    "togglePlacement": "Colocar marcadores",
+    "finishPlacement": "Terminar colocacion",
+    "resetPosition": "Restablecer posicion",
+    "placementHint": "Haz clic en cualquier parte de la imagen de la bici para colocar {component}",
+    "altRoad": "Bici de ruta en estudio",
+    "altGravel": "Bici gravel en estudio",
+    "altMtb": "MTB en estudio",
+    "legend": {
+      "watch": "Vigilar",
+      "soon": "Pronto",
+      "overdue": "Cambiar ya"
+    }
+  },
+  "handoff": {
+    "title": "Abrir en mi telefono",
+    "close": "Cerrar",
+    "fallbackWarning": "Este enlace contiene tu clave API - no la compartas con nadie mas.",
+    "scanHint": "Escanea este codigo con tu telefono. Valido durante 5 minutos.",
+    "generateError": "No se pudo generar el codigo QR.",
+    "expired": "Codigo caducado.",
+    "qrAlt": "Codigo QR",
+    "generating": "Generando..."
+  },
+  "units": {
+    "daySingle": "1 dia",
+    "dayMultiple": "{count} dias"
+  }
+}

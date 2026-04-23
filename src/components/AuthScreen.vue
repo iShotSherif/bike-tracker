@@ -1,35 +1,43 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useTracker } from '@/composables/useTracker'
 
 const emit = defineEmits<{ done: [] }>()
 
+const { t } = useI18n({ useScope: 'global' })
 const { login } = useTracker()
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL as string | undefined
+
+type AuthErrorKey = '' | 'auth.requestError' | 'auth.invalidCode'
 
 const step = ref<'email' | 'otp'>('email')
 const email = ref('')
 const otp = ref('')
 const loading = ref(false)
-const errorMsg = ref('')
+const errorKey = ref<AuthErrorKey>('')
 const resendCooldown = ref(0)
 
 async function requestOtp() {
   if (!email.value.trim() || !WORKER_URL) return
+
   loading.value = true
-  errorMsg.value = ''
+  errorKey.value = ''
+
   try {
-    const res = await fetch(`${WORKER_URL}/auth/request`, {
+    const response = await fetch(`${WORKER_URL}/auth/request`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value.trim() }),
     })
-    if (!res.ok) throw new Error('Erreur serveur')
+
+    if (!response.ok) throw new Error('Request failed')
+
     step.value = 'otp'
     startCooldown()
   } catch {
-    errorMsg.value = "Impossible d'envoyer l'email. Vérifie ta connexion."
+    errorKey.value = 'auth.requestError'
   } finally {
     loading.value = false
   }
@@ -37,15 +45,19 @@ async function requestOtp() {
 
 async function verifyOtp() {
   if (!otp.value.trim()) return
+
   loading.value = true
-  errorMsg.value = ''
+  errorKey.value = ''
+
   try {
-    const ok = await login(email.value.trim(), otp.value.trim())
-    if (!ok) {
-      errorMsg.value = "Code invalide ou expiré. Réessaie."
-    } else {
-      emit('done')
+    const isLoggedIn = await login(email.value.trim(), otp.value.trim())
+
+    if (!isLoggedIn) {
+      errorKey.value = 'auth.invalidCode'
+      return
     }
+
+    emit('done')
   } finally {
     loading.value = false
   }
@@ -53,9 +65,13 @@ async function verifyOtp() {
 
 function startCooldown() {
   resendCooldown.value = 30
-  const t = setInterval(() => {
-    resendCooldown.value--
-    if (resendCooldown.value <= 0) clearInterval(t)
+
+  const timer = window.setInterval(() => {
+    resendCooldown.value -= 1
+
+    if (resendCooldown.value <= 0) {
+      window.clearInterval(timer)
+    }
   }, 1000)
 }
 </script>
@@ -64,57 +80,58 @@ function startCooldown() {
   <div class="auth-screen">
     <div class="auth-card">
       <div class="auth-icon">🔑</div>
-      <h2 class="auth-title">Connexion</h2>
-      <p class="auth-sub">Retrouve ton profil sur n'importe quel appareil.</p>
+      <h2 class="auth-title">{{ t('auth.title') }}</h2>
+      <p class="auth-sub">{{ t('auth.subtitle') }}</p>
 
       <template v-if="step === 'email'">
         <div class="field">
-          <label class="field-label">Ton adresse email</label>
+          <label class="field-label">{{ t('auth.emailLabel') }}</label>
           <input
             v-model="email"
             type="email"
             class="input"
-            placeholder="toi@exemple.com"
-            @keydown.enter="requestOtp"
+            :placeholder="t('auth.emailPlaceholder')"
             autofocus
+            @keydown.enter="requestOtp"
           />
         </div>
+
         <button class="btn btn-primary" :disabled="loading || !email.trim()" @click="requestOtp">
-          {{ loading ? 'Envoi…' : "M'envoyer un lien de connexion" }}
+          {{ loading ? t('auth.sending') : t('auth.sendLink') }}
         </button>
       </template>
 
       <template v-else>
-        <p class="sent-hint">Un code à 6 chiffres a été envoyé à <strong>{{ email }}</strong>.</p>
+        <p class="sent-hint">{{ t('auth.codeSent', { email }) }}</p>
+
         <div class="field">
-          <label class="field-label">Code de connexion</label>
+          <label class="field-label">{{ t('auth.codeLabel') }}</label>
           <input
             v-model="otp"
             type="text"
             inputmode="numeric"
             maxlength="6"
             class="input otp-input"
-            placeholder="123456"
-            @keydown.enter="verifyOtp"
+            :placeholder="t('auth.codePlaceholder')"
             autofocus
+            @keydown.enter="verifyOtp"
           />
         </div>
+
         <button class="btn btn-primary" :disabled="loading || otp.trim().length < 6" @click="verifyOtp">
-          {{ loading ? 'Vérification…' : 'Confirmer' }}
+          {{ loading ? t('auth.verifying') : t('auth.confirm') }}
         </button>
-        <button
-          class="btn btn-ghost"
-          :disabled="resendCooldown > 0"
-          @click="requestOtp"
-        >
-          {{ resendCooldown > 0 ? `Renvoyer (${resendCooldown}s)` : 'Renvoyer le code' }}
+
+        <button class="btn btn-ghost" :disabled="resendCooldown > 0" @click="requestOtp">
+          {{ resendCooldown > 0 ? t('auth.resendIn', { seconds: resendCooldown }) : t('auth.resend') }}
         </button>
-        <button class="btn btn-ghost" @click="step = 'email'">Changer d'adresse</button>
+
+        <button class="btn btn-ghost" @click="step = 'email'">{{ t('auth.changeEmail') }}</button>
       </template>
 
-      <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
+      <p v-if="errorKey" class="error">{{ t(errorKey) }}</p>
 
-      <button class="skip-link" @click="emit('done')">Continuer sans compte →</button>
+      <button class="skip-link" @click="emit('done')">{{ t('auth.continueWithoutAccount') }}</button>
     </div>
   </div>
 </template>
@@ -126,6 +143,7 @@ function startCooldown() {
   justify-content: center;
   padding: 2rem 1rem;
 }
+
 .auth-card {
   width: 100%;
   max-width: 400px;
@@ -137,7 +155,12 @@ function startCooldown() {
   flex-direction: column;
   gap: 1rem;
 }
-.auth-icon { font-size: 2rem; text-align: center; }
+
+.auth-icon {
+  font-size: 2rem;
+  text-align: center;
+}
+
 .auth-title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -145,13 +168,20 @@ function startCooldown() {
   color: var(--text);
   text-align: center;
 }
+
 .auth-sub {
   font-size: 0.85rem;
   color: var(--muted);
   margin: 0;
   text-align: center;
 }
-.field { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
 .field-label {
   font-size: 0.78rem;
   font-weight: 700;
@@ -159,6 +189,7 @@ function startCooldown() {
   letter-spacing: 0.05em;
   color: var(--muted);
 }
+
 .input {
   padding: 0.6rem 0.85rem;
   border: 1.5px solid var(--border);
@@ -169,13 +200,19 @@ function startCooldown() {
   font-family: inherit;
   transition: border-color 0.15s;
 }
-.input:focus { outline: none; border-color: var(--accent); }
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .otp-input {
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.3em;
   text-align: center;
 }
+
 .btn {
   padding: 0.6rem 1rem;
   border-radius: var(--radius-sm);
@@ -188,12 +225,41 @@ function startCooldown() {
   font-family: inherit;
   transition: background 0.15s;
 }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
-.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); font-size: 0.85rem; }
-.btn-ghost:hover:not(:disabled) { color: var(--text); }
-.sent-hint { font-size: 0.85rem; color: var(--muted); margin: 0; }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.sent-hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0;
+}
+
 .error {
   font-size: 0.85rem;
   color: var(--danger);
@@ -202,6 +268,7 @@ function startCooldown() {
   border-radius: var(--radius-sm);
   margin: 0;
 }
+
 .skip-link {
   background: none;
   border: none;
@@ -213,5 +280,9 @@ function startCooldown() {
   text-align: center;
   margin-top: 0.25rem;
 }
-.skip-link:hover { color: var(--accent); text-decoration: underline; }
+
+.skip-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
 </style>

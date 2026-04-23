@@ -1,13 +1,13 @@
 self.addEventListener('push', (event) => {
   if (!event.data) return
   let data
-  try { data = event.data.json() } catch { data = { title: 'Bike Maintenance', body: event.data.text() } }
+  try { data = event.data.json() } catch { data = { title: 'Entretien vélo', body: event.data.text() } }
   event.waitUntil(
     self.registration.showNotification(data.title ?? 'Ride & Maintain', {
       body: data.body ?? '',
       icon: '/favicon.ico',
       badge: '/favicon.ico',
-      tag: data.tag ?? 'bike-maintenance',
+      tag: data.tag ?? 'entretien-velo',
       data: data.url ? { url: data.url } : undefined,
     })
   )

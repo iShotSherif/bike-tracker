@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import type { IntervalsAthlete, IntervalsBike, BikeComponent, TrackerState, IntervalsActivity, ServiceLogEntry, NotificationSettings, SyncPayload } from '@/types'
+import type { IntervalsAthlete, IntervalsBike, BikeComponent, TrackerState, IntervalsActivity, ServiceLogEntry, NotificationSettings, SyncPayload, HotspotPosition, BikeVisualType } from '@/types'
 import { fetchAthlete, bikeDistanceKm, fetchActivities, kmOnBikeByDate } from '@/api/intervals'
 import { componentStatus, alertDetail } from '@/utils/status'
 import { todayISO } from '@/utils/date'
@@ -34,6 +34,21 @@ function loadState(): Partial<TrackerState> {
       state.componentsByBike = migratedComponents
     }
 
+    if (state.hotspotPositionsByBike) {
+      const migratedHotspots: TrackerState['hotspotPositionsByBike'] = {}
+      for (const [bikeId, hotspotMap] of Object.entries(state.hotspotPositionsByBike)) {
+        const values = Object.values(hotspotMap as Record<string, unknown>)
+        const isLegacyFlatMap = values.every((value) =>
+          typeof value === 'object' && value !== null && 'leftPct' in (value as object) && 'topPct' in (value as object)
+        )
+
+        migratedHotspots[bikeId] = isLegacyFlatMap
+          ? { road: hotspotMap as Record<string, HotspotPosition> }
+          : hotspotMap as TrackerState['hotspotPositionsByBike'][string]
+      }
+      state.hotspotPositionsByBike = migratedHotspots
+    }
+
     return state
   } catch {
     return {}
@@ -61,6 +76,12 @@ const bikes = computed<IntervalsBike[]>(() => athlete.value?.bikes ?? [])
 const componentsByBike = ref<Record<string, BikeComponent[]>>(
   loadState().componentsByBike ?? {}
 )
+const hotspotPositionsByBike = ref<Record<string, Partial<Record<BikeVisualType, Record<string, HotspotPosition>>>>>(
+  loadState().hotspotPositionsByBike ?? {}
+)
+const bikeVisualByBike = ref<Record<string, BikeVisualType>>(
+  loadState().bikeVisualByBike ?? {}
+)
 
 const serviceLog = ref<ServiceLogEntry[]>(loadState().serviceLog ?? [])
 const notificationSettings = ref<NotificationSettings>(loadState().notificationSettings ?? {})
@@ -75,6 +96,8 @@ function persist(): void {
     authToken: authToken.value || undefined,
     stravaConnected: stravaConnected.value,
     componentsByBike: componentsByBike.value,
+    hotspotPositionsByBike: hotspotPositionsByBike.value,
+    bikeVisualByBike: bikeVisualByBike.value,
     serviceLog: serviceLog.value,
     notificationSettings: notificationSettings.value,
   })
@@ -103,6 +126,49 @@ function addComponent(bikeId: string, component: Omit<BikeComponent, 'id'>): voi
   setComponentsForBike(bikeId, [...list, newOne])
 }
 
+function getHotspotPositionsForBike(bikeId: string, visual: BikeVisualType): Record<string, HotspotPosition> {
+  return hotspotPositionsByBike.value[bikeId]?.[visual] ?? {}
+}
+
+function getBikeVisual(bikeId: string): BikeVisualType {
+  return bikeVisualByBike.value[bikeId] ?? 'road'
+}
+
+function setBikeVisual(bikeId: string, visual: BikeVisualType): void {
+  bikeVisualByBike.value = {
+    ...bikeVisualByBike.value,
+    [bikeId]: visual,
+  }
+  persist()
+}
+
+function setHotspotPosition(bikeId: string, visual: BikeVisualType, componentId: string, position: HotspotPosition): void {
+  hotspotPositionsByBike.value = {
+    ...hotspotPositionsByBike.value,
+    [bikeId]: {
+      ...hotspotPositionsByBike.value[bikeId],
+      [visual]: {
+        ...getHotspotPositionsForBike(bikeId, visual),
+        [componentId]: position,
+      },
+    },
+  }
+  persist()
+}
+
+function clearHotspotPosition(bikeId: string, visual: BikeVisualType, componentId: string): void {
+  const visualPositions = { ...getHotspotPositionsForBike(bikeId, visual) }
+  delete visualPositions[componentId]
+  hotspotPositionsByBike.value = {
+    ...hotspotPositionsByBike.value,
+    [bikeId]: {
+      ...hotspotPositionsByBike.value[bikeId],
+      [visual]: visualPositions,
+    },
+  }
+  persist()
+}
+
 function updateComponent(bikeId: string, id: string, patch: Partial<BikeComponent>): void {
   const list = getComponentsForBike(bikeId).map((c) =>
     c.id === id ? { ...c, ...patch } : c
@@ -111,6 +177,9 @@ function updateComponent(bikeId: string, id: string, patch: Partial<BikeComponen
 }
 
 function removeComponent(bikeId: string, id: string): void {
+  for (const visual of ['road', 'gravel', 'mtb'] as BikeVisualType[]) {
+    clearHotspotPosition(bikeId, visual, id)
+  }
   setComponentsForBike(
     bikeId,
     getComponentsForBike(bikeId).filter((c) => c.id !== id)
@@ -180,6 +249,8 @@ function exportState(): string {
   return JSON.stringify({
     apiKey: apiKey.value,
     componentsByBike: componentsByBike.value,
+    hotspotPositionsByBike: hotspotPositionsByBike.value,
+    bikeVisualByBike: bikeVisualByBike.value,
     serviceLog: serviceLog.value,
     notificationSettings: notificationSettings.value,
   }, null, 2)
@@ -190,6 +261,8 @@ function importState(json: string): void {
     const parsed = JSON.parse(json)
     if (parsed.apiKey) apiKey.value = parsed.apiKey
     if (parsed.componentsByBike) componentsByBike.value = parsed.componentsByBike
+    if (parsed.hotspotPositionsByBike) hotspotPositionsByBike.value = parsed.hotspotPositionsByBike
+    if (parsed.bikeVisualByBike) bikeVisualByBike.value = parsed.bikeVisualByBike
     if (parsed.serviceLog) serviceLog.value = parsed.serviceLog
     if (parsed.notificationSettings) notificationSettings.value = parsed.notificationSettings
     persist()
@@ -200,11 +273,10 @@ function importState(json: string): void {
 
 function authHeaders(): Record<string, string> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (authToken.value) h['Authorization'] = `Bearer ${authToken.value}`
+  if (authToken.value) h.Authorization = `Bearer ${authToken.value}`
   return h
 }
 
-// Cloud profile sync — saves/restores full state (components + serviceLog) keyed by userId
 async function pushProfileToCloud(): Promise<void> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
   if (!workerUrl || !userId.value) return
@@ -215,6 +287,8 @@ async function pushProfileToCloud(): Promise<void> {
       body: JSON.stringify({
         userId: userId.value,
         componentsByBike: componentsByBike.value,
+        hotspotPositionsByBike: hotspotPositionsByBike.value,
+        bikeVisualByBike: bikeVisualByBike.value,
         serviceLog: serviceLog.value,
         notificationSettings: notificationSettings.value,
       }),
@@ -230,11 +304,15 @@ async function pullProfileFromCloud(): Promise<boolean> {
     if (!res.ok) return false
     const data = await res.json() as Partial<TrackerState>
     if (data.componentsByBike) componentsByBike.value = data.componentsByBike
+    if (data.hotspotPositionsByBike) hotspotPositionsByBike.value = data.hotspotPositionsByBike
+    if (data.bikeVisualByBike) bikeVisualByBike.value = data.bikeVisualByBike
     if (data.serviceLog) serviceLog.value = data.serviceLog
     if (data.notificationSettings) notificationSettings.value = data.notificationSettings
     persist()
     return true
-  } catch { return false }
+  } catch {
+    return false
+  }
 }
 
 async function login(email: string, otp: string): Promise<boolean> {
@@ -252,7 +330,9 @@ async function login(email: string, otp: string): Promise<boolean> {
     persist()
     await pullProfileFromCloud()
     return true
-  } catch { return false }
+  } catch {
+    return false
+  }
 }
 
 function logout(): void {
@@ -284,7 +364,6 @@ async function loadStravaActivities(): Promise<void> {
     }
     const data = await res.json() as { bikes: IntervalsBike[]; activities: IntervalsActivity[] }
 
-    // Merge Strava bikes into athlete (or create a synthetic athlete if none)
     if (!athlete.value) {
       athlete.value = { id: 'strava', name: 'Strava', bikes: data.bikes }
     } else {
@@ -293,7 +372,6 @@ async function loadStravaActivities(): Promise<void> {
       athlete.value = { ...athlete.value, bikes: [...athlete.value.bikes, ...newBikes] }
     }
 
-    // Merge Strava activities (deduplicate by id)
     const existingActivityIds = new Set(activities.value.map((a) => a.id))
     const newActivities = data.activities.filter((a) => !existingActivityIds.has(a.id))
     activities.value = [...activities.value, ...newActivities]
@@ -335,7 +413,6 @@ async function loadAthlete(): Promise<void> {
     const newest = new Date().toISOString().split('T')[0]
     const oldest = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     activities.value = await fetchActivities(apiKey.value, { oldest, newest, limit: 1000 })
-    // Try to restore profile from cloud first, then fall back to defaults
     const restored = await pullProfileFromCloud()
     if (!restored) {
       bikes.value.forEach((bike) => initDefaultComponents(bike.id))
@@ -385,13 +462,20 @@ export function useTracker() {
     error,
     bikes,
     componentsByBike,
+    hotspotPositionsByBike,
+    bikeVisualByBike,
     serviceLog,
     alertComponents,
     getComponentsForBike,
+    getHotspotPositionsForBike,
+    getBikeVisual,
     setComponentsForBike,
     addComponent,
     updateComponent,
     removeComponent,
+    setHotspotPosition,
+    clearHotspotPosition,
+    setBikeVisual,
     addServiceEntry,
     getLogForComponent,
     markComponentDone,

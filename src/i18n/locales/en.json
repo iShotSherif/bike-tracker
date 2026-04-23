@@ -1,7 +1,7 @@
 {
   "common": {
     "language": "Language",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "save": "Save",
     "cancel": "Cancel",
     "confirm": "Confirm",
@@ -16,14 +16,14 @@
       "or": "or",
       "intervals": {
         "label": "Intervals.icu",
-        "placeholder": "Paste your key here",
+        "placeholder": "Paste your API key here",
         "connect": "Connect",
-        "connecting": "Connecting...",
+        "connecting": "Connecting…",
         "hint": "Read-only access. Your data is only used to calculate maintenance reminders.",
-        "findKey": "Where can I find my key?",
+        "findKey": "Where can I find my API key?",
         "togglePassword": {
-          "show": "Show key",
-          "hide": "Hide key"
+          "show": "Show API key",
+          "hide": "Hide API key"
         }
       },
       "strava": {
@@ -33,8 +33,8 @@
       },
       "auth": {
         "connected": "Connected",
-        "syncLogin": "Sign in for multi-device sync ->",
-        "continueWithoutConnection": "Continue without connecting ->"
+        "syncLogin": "Sign in for multi-device sync →",
+        "continueWithoutConnection": "Continue without connecting →"
       }
     },
     "badges": {
@@ -66,18 +66,18 @@
     "title": "Sign in",
     "subtitle": "Find your profile on any device.",
     "emailLabel": "Your email address",
-    "emailPlaceholder": "you{'@'}example.com",
+    "emailPlaceholder": "you@example.com",
     "sendLink": "Send me a sign-in link",
-    "sending": "Sending...",
+    "sending": "Sending…",
     "codeSent": "A 6-digit code was sent to {email}.",
     "codeLabel": "Sign-in code",
     "codePlaceholder": "123456",
     "confirm": "Confirm",
-    "verifying": "Checking...",
+    "verifying": "Checking…",
     "resend": "Resend code",
     "resendIn": "Resend ({seconds}s)",
     "changeEmail": "Change email",
-    "continueWithoutAccount": "Continue without an account ->",
+    "continueWithoutAccount": "Continue without an account →",
     "requestError": "We couldn't send the email. Check your connection.",
     "invalidCode": "Invalid or expired code. Try again."
   },
@@ -183,10 +183,10 @@
     "pushHint": "One click and reminders arrive directly on this phone, with no app to install.",
     "emailHint": "Enter your email above to enable reminders on this phone.",
     "alertLevel": "Alert level",
-    "soonAndOverdue": "Soon due + overdue",
+    "soonAndOverdue": "Soon due and overdue",
     "overdueOnly": "Overdue only",
-    "saved": "Alerts saved.",
-    "testSending": "Sending...",
+    "saved": "Alerts settings saved.",
+    "testSending": "Sending…",
     "testSuccess": "Sent!",
     "testError": "Error",
     "test": "Test"
@@ -221,7 +221,7 @@
     "generateError": "Couldn't generate the QR code.",
     "expired": "Code expired.",
     "qrAlt": "QR code",
-    "generating": "Generating..."
+    "generating": "Generating…"
   },
   "units": {
     "daySingle": "1 day",

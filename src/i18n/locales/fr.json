@@ -1,13 +1,13 @@
 {
   "common": {
     "language": "Langue",
-    "loading": "Chargement...",
+    "loading": "Chargement…",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "confirm": "Confirmer",
     "close": "Fermer",
     "copy": "Copier",
-    "email": "Email"
+    "email": "E-mail"
   },
   "app": {
     "title": "Ride & Maintain",
@@ -16,85 +16,85 @@
       "or": "ou",
       "intervals": {
         "label": "Intervals.icu",
-        "placeholder": "Colle ta cle ici",
+        "placeholder": "Colle ta clé API ici",
         "connect": "Connecter",
-        "connecting": "Connexion...",
-        "hint": "Acces en lecture seule. Tes donnees servent uniquement au calcul des rappels.",
-        "findKey": "Ou trouver ma cle ?",
+        "connecting": "Connexion…",
+        "hint": "Accès en lecture seule. Tes données servent uniquement au calcul des rappels.",
+        "findKey": "Où trouver ma clé API ?",
         "togglePassword": {
-          "show": "Afficher la cle",
-          "hide": "Masquer la cle"
+          "show": "Afficher la clé API",
+          "hide": "Masquer la clé API"
         }
       },
       "strava": {
         "label": "Strava",
         "connect": "Connecter Strava",
-        "hint": "Connexion via OAuth - aucun mot de passe stocke."
+        "hint": "Connexion via OAuth – aucun mot de passe enregistré."
       },
       "auth": {
-        "connected": "Connecte",
-        "syncLogin": "Se connecter pour la synchro multi-appareils ->",
-        "continueWithoutConnection": "Continuer sans connexion ->"
+        "connected": "Connecté",
+        "syncLogin": "Se connecter pour la synchro multi-appareils →",
+        "continueWithoutConnection": "Continuer sans connexion →"
       }
     },
     "badges": {
-      "handoffLoaded": "Profil charge sur cet appareil",
+      "handoffLoaded": "Profil chargé sur cet appareil",
       "intervals": "Intervals.icu",
       "strava": "Strava",
-      "bikeFoundSingle": "1 velo trouve",
-      "bikeFoundMultiple": "{count} velos trouves"
+      "bikeFoundSingle": "1 vélo trouvé",
+      "bikeFoundMultiple": "{count} vélos trouvés"
     },
     "tabs": {
-      "bikes": "Mes velos",
+      "bikes": "Mes vélos",
       "alerts": "Alertes"
     },
     "empty": {
-      "noBikes": "Aucun velo connecte.",
+      "noBikes": "Aucun vélo connecté.",
       "connectIntervals": "Connecter Intervals.icu"
     },
     "actions": {
       "refreshIntervals": "Actualiser Intervals.icu",
       "refreshStrava": "Actualiser Strava",
-      "export": "Exporter mes donnees",
+      "export": "Exporter mes données",
       "import": "Importer",
-      "openOnPhone": "Ouvrir sur mon telephone",
-      "logout": "Se deconnecter",
+      "openOnPhone": "Ouvrir sur mon téléphone",
+      "logout": "Se déconnecter",
       "login": "Se connecter"
     }
   },
   "auth": {
     "title": "Connexion",
     "subtitle": "Retrouve ton profil sur n'importe quel appareil.",
-    "emailLabel": "Ton adresse email",
-    "emailPlaceholder": "toi{'@'}exemple.com",
+    "emailLabel": "Ton adresse e-mail",
+    "emailPlaceholder": "toi@example.com",
     "sendLink": "M'envoyer un lien de connexion",
-    "sending": "Envoi...",
-    "codeSent": "Un code a 6 chiffres a ete envoye a {email}.",
+    "sending": "Envoi…",
+    "codeSent": "Un code à 6 chiffres a été envoyé à {email}.",
     "codeLabel": "Code de connexion",
     "codePlaceholder": "123456",
     "confirm": "Confirmer",
-    "verifying": "Verification...",
+    "verifying": "Vérification…",
     "resend": "Renvoyer le code",
     "resendIn": "Renvoyer ({seconds}s)",
     "changeEmail": "Changer d'adresse",
-    "continueWithoutAccount": "Continuer sans compte ->",
-    "requestError": "Impossible d'envoyer l'email. Verifie ta connexion.",
-    "invalidCode": "Code invalide ou expire. Reessaie."
+    "continueWithoutAccount": "Continuer sans compte →",
+    "requestError": "Impossible d'envoyer l'e-mail. Vérifie ta connexion.",
+    "invalidCode": "Code invalide ou expiré, réessaie."
   },
   "alerts": {
     "title": "Mes alertes actives",
     "emptyOk": "Tous les composants sont OK",
-    "settingsTitle": "Reglages des rappels",
+    "settingsTitle": "Réglages des rappels",
     "historyTitle": "Historique des interventions",
-    "emptyHistory": "Aucune intervention enregistree.",
+    "emptyHistory": "Aucune intervention enregistrée",
     "markDoneToday": "Fait aujourd'hui",
-    "resetDone": "Remis a zero",
+    "resetDone": "Remis à zéro",
     "defaultServiceNote": "Entretien",
     "status": {
       "ok": "OK",
-      "watch": "A surveiller",
-      "soon": "A controler",
-      "overdue": "A remplacer"
+      "watch": "À surveiller",
+      "soon": "À contrôler",
+      "overdue": "À remplacer"
     },
     "detail": {
       "kmOverdue": "{count} km de retard",
@@ -106,34 +106,34 @@
     }
   },
   "bike": {
-    "unnamed": "Velo sans nom",
+    "unnamed": "Vélo sans nom",
     "totalKm": "{count} km au total"
   },
   "dashboard": {
-    "title": "A surveiller",
-    "overdue": "A remplacer",
-    "soon": "A controler",
-    "watch": "A surveiller",
+    "title": "À surveiller",
+    "overdue": "À remplacer",
+    "soon": "À contrôler",
+    "watch": "À surveiller",
     "emptyOk": "Tous les composants sont OK"
   },
   "components": {
     "selectPlaceholder": "Choisir un composant",
-    "selectedPlaceholder": "le composant selectionne",
+    "selectedPlaceholder": "le composant sélectionné",
     "names": {
-      "chain": "Chaine",
+      "chain": "Chaîne",
       "cassette": "Cassette",
       "brakePads": "Plaquettes de frein",
       "tires": "Pneus",
-      "brakeCables": "Cables de frein",
-      "fullService": "Revision generale",
+      "brakeCables": "Câbles de frein",
+      "fullService": "Révision générale",
       "brakeBleed": "Purge des freins",
       "chainrings": "Plateaux",
-      "bottomBracket": "Boitier de pedalier",
+      "bottomBracket": "Boîtier de pédalier",
       "brakeRotors": "Disques de frein",
-      "sealant": "Liquide preventif",
+      "sealant": "Liquide préventif",
       "freehub": "Roue libre",
-      "chainService": "Entretien de la chaine",
-      "rearSuspension": "Suspension arriere",
+      "chainService": "Entretien de la chaîne",
+      "rearSuspension": "Suspension arrière",
       "frontSuspension": "Suspension avant"
     }
   },
@@ -147,14 +147,14 @@
     "placeholders": {
       "kmInterval": "intervalle km",
       "daysInterval": "jours",
-      "startKm": "km de depart",
+      "startKm": "km de départ",
       "notes": "Notes (facultatif)"
     },
     "titles": {
       "daysHelp": "ex. 365 = 1 an, 730 = 2 ans",
-      "startKmHelp": "Calcule automatiquement depuis l'historique d'activite",
+      "startKmHelp": "Calcule automatiquement depuis l'historique d'activité",
       "markDone": "Marquer comme fait",
-      "edit": "Modifier les reglages",
+      "edit": "Modifier les réglages",
       "remove": "Supprimer"
     },
     "actions": {
@@ -162,9 +162,9 @@
       "history": "Historique",
       "add": "Ajouter"
     },
-    "intervalLabel": "Alerte a {parts}",
-    "started": "Demarre {time}",
-    "serviceNow": "{used} km - entretien a faire maintenant",
+    "intervalLabel": "Alerte à {parts}",
+    "started": "Démarre {time}",
+    "serviceNow": "{used} km - entretien à faire maintenant",
     "kmRemaining": "{left} km restants ({used}/{interval})",
     "daysOverdueSingle": "1 jour de retard",
     "daysOverdueMultiple": "{count} jours de retard",
@@ -174,54 +174,54 @@
   },
   "notifications": {
     "title": "Mes alertes",
-    "phoneLabel": "Notifications sur ce telephone",
-    "pushUnsupported": "Les notifications push ne sont pas supportees par ce navigateur.",
-    "pushEnabled": "Notifications activees",
-    "disable": "Desactiver",
+    "phoneLabel": "Notifications sur ce téléphone",
+    "pushUnsupported": "Les notifications push ne sont pas supportées par ce navigateur.",
+    "pushEnabled": "Notifications activées",
+    "disable": "Désactiver",
     "enable": "Activer les notifications",
-    "enabling": "En cours...",
-    "pushHint": "Un seul clic et les rappels arrivent directement sur ce telephone, sans appli a installer.",
-    "emailHint": "Entre ton email ci-dessus pour activer les rappels sur ce telephone.",
+    "enabling": "En cours…",
+    "pushHint": "Un seul clic et les rappels arrivent directement sur ce téléphone, sans appli à installer.",
+    "emailHint": "Entre ton e-mail ci-dessus pour activer les rappels sur ce téléphone.",
     "alertLevel": "Niveau d'alerte",
-    "soonAndOverdue": "Bientot du + en retard",
+    "soonAndOverdue": "À venir et en retard",
     "overdueOnly": "En retard uniquement",
-    "saved": "Alertes enregistrees.",
-    "testSending": "Envoi...",
-    "testSuccess": "Envoye !",
+    "saved": "Alertes enregistrées",
+    "testSending": "Envoi…",
+    "testSuccess": "Envoyé !",
     "testError": "Erreur",
     "test": "Tester"
   },
   "bikeVisual": {
     "eyebrow": "Carte d'entretien",
-    "headline": "Repere en un coup d'oeil ce qui demande ton attention avant la prochaine sortie.",
-    "caption": "Les composants critiques s'affichent directement sur le velo pour une lecture immediate, sans fouiller dans une liste.",
-    "visuals": {
-      "road": "Route",
-      "gravel": "Gravel",
-      "mtb": "VTT"
-    },
-    "togglePlacement": "Placer les reperes",
-    "finishPlacement": "Terminer le placement",
-    "resetPosition": "Reinitialiser la position",
-    "placementHint": "Clique n'importe ou sur l'image du velo pour placer {component}",
-    "altRoad": "Velo de route en studio",
-    "altGravel": "Velo gravel en studio",
-    "altMtb": "VTT en studio",
-    "legend": {
-      "watch": "A surveiller",
-      "soon": "Bientot a faire",
-      "overdue": "A remplacer"
-    }
+    "headline": "Repère en un coup d'œil ce qui demande ton attention avant la prochaine sortie.",
+    "caption": "Les composants critiques s'affichent directement sur le vélo pour une lecture immédiate, sans fouiller dans une liste."
+  },
+  "visuals": {
+    "road": "Route",
+    "gravel": "Gravel",
+    "mtb": "VTT"
+  },
+  "togglePlacement": "Placer les repères",
+  "finishPlacement": "Terminer le placement",
+  "resetPosition": "Réinitialiser la position",
+  "placementHint": "Clique n'importe où sur l'image du vélo pour placer {component}",
+  "altRoad": "Vélo de route en studio",
+  "altGravel": "Vélo gravel en studio",
+  "altMtb": "VTT en studio",
+  "legend": {
+    "watch": "À surveiller",
+    "soon": "Bientôt à faire",
+    "overdue": "À remplacer"
   },
   "handoff": {
-    "title": "Ouvrir sur mon telephone",
+    "title": "Ouvrir sur mon téléphone",
     "close": "Fermer",
-    "fallbackWarning": "Ce lien contient ta cle API - ne le partage pas avec quelqu'un d'autre.",
-    "scanHint": "Scanne ce code avec ton telephone. Valable 5 minutes.",
-    "generateError": "Impossible de generer le QR code.",
-    "expired": "Code expire.",
+    "fallbackWarning": "Ce lien contient ta clé API – ne le partage pas avec quelqu'un d'autre.",
+    "scanHint": "Scanne ce code avec ton téléphone. Valable 5 minutes.",
+    "generateError": "Impossible de générer le QR code.",
+    "expired": "Code expiré.",
     "qrAlt": "QR code",
-    "generating": "Generation..."
+    "generating": "Génération…"
   },
   "units": {
     "daySingle": "1 jour",

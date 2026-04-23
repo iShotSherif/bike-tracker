@@ -1,23 +1,18 @@
-/**
- * Format a past ISO date (YYYY-MM-DD) as relative time: "3 months", "45 days", etc.
- */
-export function formatSince(isoDate: string): string {
+export function formatSince(isoDate: string, locale = 'en'): string {
   const then = new Date(isoDate)
   const now = new Date()
-  const diffMs = now.getTime() - then.getTime()
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000))
+  const diffDays = Math.floor((then.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
 
-  if (diffDays < 0) return 'future'
-  if (diffDays === 0) return 'today'
-  if (diffDays === 1) return '1 day'
-  if (diffDays < 30) return `${diffDays} days`
-  if (diffDays < 60) return '1 month'
-  if (diffDays < 365) return `${Math.round(diffDays / 30)} months`
-  if (diffDays < 730) return '1 year'
-  return `${Math.round(diffDays / 365)} years`
+  if (Math.abs(diffDays) < 30) return formatter.format(diffDays, 'day')
+
+  const diffMonths = Math.round(diffDays / 30)
+  if (Math.abs(diffMonths) < 12) return formatter.format(diffMonths, 'month')
+
+  const diffYears = Math.round(diffDays / 365)
+  return formatter.format(diffYears, 'year')
 }
 
-/** Return today in YYYY-MM-DD for date inputs. */
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }

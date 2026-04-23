@@ -1,0 +1,230 @@
+{
+  "common": {
+    "language": "Language",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "copy": "Copy",
+    "email": "Email"
+  },
+  "app": {
+    "title": "Ride & Maintain",
+    "subtitle": "Track your components, log service, and ride without surprises.",
+    "setup": {
+      "or": "or",
+      "intervals": {
+        "label": "Intervals.icu",
+        "placeholder": "Paste your key here",
+        "connect": "Connect",
+        "connecting": "Connecting...",
+        "hint": "Read-only access. Your data is only used to calculate maintenance reminders.",
+        "findKey": "Where can I find my key?",
+        "togglePassword": {
+          "show": "Show key",
+          "hide": "Hide key"
+        }
+      },
+      "strava": {
+        "label": "Strava",
+        "connect": "Connect Strava",
+        "hint": "OAuth connection - no password stored."
+      },
+      "auth": {
+        "connected": "Connected",
+        "syncLogin": "Sign in for multi-device sync ->",
+        "continueWithoutConnection": "Continue without connecting ->"
+      }
+    },
+    "badges": {
+      "handoffLoaded": "Profile loaded on this device",
+      "intervals": "Intervals.icu",
+      "strava": "Strava",
+      "bikeFoundSingle": "1 bike found",
+      "bikeFoundMultiple": "{count} bikes found"
+    },
+    "tabs": {
+      "bikes": "My bikes",
+      "alerts": "Alerts"
+    },
+    "empty": {
+      "noBikes": "No bike connected.",
+      "connectIntervals": "Connect Intervals.icu"
+    },
+    "actions": {
+      "refreshIntervals": "Refresh Intervals.icu",
+      "refreshStrava": "Refresh Strava",
+      "export": "Export my data",
+      "import": "Import",
+      "openOnPhone": "Open on my phone",
+      "logout": "Log out",
+      "login": "Sign in"
+    }
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Find your profile on any device.",
+    "emailLabel": "Your email address",
+    "emailPlaceholder": "you{'@'}example.com",
+    "sendLink": "Send me a sign-in link",
+    "sending": "Sending...",
+    "codeSent": "A 6-digit code was sent to {email}.",
+    "codeLabel": "Sign-in code",
+    "codePlaceholder": "123456",
+    "confirm": "Confirm",
+    "verifying": "Checking...",
+    "resend": "Resend code",
+    "resendIn": "Resend ({seconds}s)",
+    "changeEmail": "Change email",
+    "continueWithoutAccount": "Continue without an account ->",
+    "requestError": "We couldn't send the email. Check your connection.",
+    "invalidCode": "Invalid or expired code. Try again."
+  },
+  "alerts": {
+    "title": "Active alerts",
+    "emptyOk": "All components are OK",
+    "settingsTitle": "Reminder settings",
+    "historyTitle": "Service history",
+    "emptyHistory": "No service recorded yet.",
+    "markDoneToday": "Done today",
+    "resetDone": "Reset",
+    "defaultServiceNote": "Service",
+    "status": {
+      "ok": "OK",
+      "watch": "Watch",
+      "soon": "Check soon",
+      "overdue": "Replace now"
+    },
+    "detail": {
+      "kmOverdue": "{count} km overdue",
+      "kmRemaining": "{count} km left",
+      "daysOverdueSingle": "1 day overdue",
+      "daysOverdueMultiple": "{count} days overdue",
+      "daysRemainingSingle": "1 day left",
+      "daysRemainingMultiple": "{count} days left"
+    }
+  },
+  "bike": {
+    "unnamed": "Unnamed bike",
+    "totalKm": "{count} km total"
+  },
+  "dashboard": {
+    "title": "Needs attention",
+    "overdue": "Replace now",
+    "soon": "Check soon",
+    "watch": "Watch",
+    "emptyOk": "All components are OK"
+  },
+  "components": {
+    "selectPlaceholder": "Choose a component",
+    "selectedPlaceholder": "the selected component",
+    "names": {
+      "chain": "Chain",
+      "cassette": "Cassette",
+      "brakePads": "Brake pads",
+      "tires": "Tires",
+      "brakeCables": "Brake cables",
+      "fullService": "Full service",
+      "brakeBleed": "Brake bleed",
+      "chainrings": "Chainrings",
+      "bottomBracket": "Bottom bracket",
+      "brakeRotors": "Brake rotors",
+      "sealant": "Tubeless sealant",
+      "freehub": "Freehub",
+      "chainService": "Chain service",
+      "rearSuspension": "Rear suspension",
+      "frontSuspension": "Front suspension"
+    }
+  },
+  "tracker": {
+    "componentNamePlaceholder": "Component name",
+    "mode": {
+      "km": "km",
+      "days": "Time",
+      "both": "Both"
+    },
+    "placeholders": {
+      "kmInterval": "km interval",
+      "daysInterval": "days",
+      "startKm": "starting km",
+      "notes": "Notes (optional)"
+    },
+    "titles": {
+      "daysHelp": "ex. 365 = 1 year, 730 = 2 years",
+      "startKmHelp": "Calculated automatically from activity history",
+      "markDone": "Mark as done",
+      "edit": "Edit settings",
+      "remove": "Delete"
+    },
+    "actions": {
+      "addComponent": "+ Add a component",
+      "history": "History",
+      "add": "Add"
+    },
+    "intervalLabel": "Alert at {parts}",
+    "started": "Started {time}",
+    "serviceNow": "{used} km - service now",
+    "kmRemaining": "{left} km left ({used}/{interval})",
+    "daysOverdueSingle": "1 day overdue",
+    "daysOverdueMultiple": "{count} days overdue",
+    "daysRemainingSingle": "1 day left",
+    "daysRemainingMultiple": "{count} days left",
+    "historyEmpty": "No service history yet."
+  },
+  "notifications": {
+    "title": "My alerts",
+    "phoneLabel": "Notifications on this phone",
+    "pushUnsupported": "Push notifications are not supported by this browser.",
+    "pushEnabled": "Notifications enabled",
+    "disable": "Disable",
+    "enable": "Enable notifications",
+    "enabling": "Enabling...",
+    "pushHint": "One click and reminders arrive directly on this phone, with no app to install.",
+    "emailHint": "Enter your email above to enable reminders on this phone.",
+    "alertLevel": "Alert level",
+    "soonAndOverdue": "Soon due + overdue",
+    "overdueOnly": "Overdue only",
+    "saved": "Alerts saved.",
+    "testSending": "Sending...",
+    "testSuccess": "Sent!",
+    "testError": "Error",
+    "test": "Test"
+  },
+  "bikeVisual": {
+    "eyebrow": "Maintenance map",
+    "headline": "See at a glance what needs attention before your next ride.",
+    "caption": "Critical components appear directly on the bike for quick reading, without digging through a list.",
+    "visuals": {
+      "road": "Road",
+      "gravel": "Gravel",
+      "mtb": "MTB"
+    },
+    "togglePlacement": "Place markers",
+    "finishPlacement": "Finish placing",
+    "resetPosition": "Reset position",
+    "placementHint": "Click anywhere on the bike image to place {component}",
+    "altRoad": "Road bike in studio",
+    "altGravel": "Gravel bike in studio",
+    "altMtb": "Mountain bike in studio",
+    "legend": {
+      "watch": "Watch",
+      "soon": "Due soon",
+      "overdue": "Replace now"
+    }
+  },
+  "handoff": {
+    "title": "Open on my phone",
+    "close": "Close",
+    "fallbackWarning": "This link contains your API key - do not share it with anyone else.",
+    "scanHint": "Scan this code with your phone. Valid for 5 minutes.",
+    "generateError": "Couldn't generate the QR code.",
+    "expired": "Code expired.",
+    "qrAlt": "QR code",
+    "generating": "Generating..."
+  },
+  "units": {
+    "daySingle": "1 day",
+    "dayMultiple": "{count} days"
+  }
+}

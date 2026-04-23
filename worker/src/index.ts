@@ -1,4 +1,4 @@
-interface Env {
+﻿interface Env {
   ALERT_STORE: KVNamespace
   RESEND_API_KEY: string
   VAPID_PRIVATE_KEY: string
@@ -107,7 +107,7 @@ export default {
       return handleStravaActivities(request, env)
     }
 
-    return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Introuvable' }), { status: 404, headers: CORS })
   },
 
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
@@ -120,16 +120,16 @@ async function handleSync(request: Request, env: Env): Promise<Response> {
   try {
     body = await request.json() as SyncPayload
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'JSON invalide' }), { status: 400, headers: CORS })
   }
 
   if (!body.userId || typeof body.userId !== 'string') {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
   }
 
   const { email, pushSubscription } = body.notificationSettings ?? {}
   if (!email && !pushSubscription) {
-    return new Response(JSON.stringify({ error: 'No notification channels configured' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Aucun canal de notification configuré' }), { status: 400, headers: CORS })
   }
 
   await env.ALERT_STORE.put(body.userId, JSON.stringify(body), { expirationTtl: 172800 })
@@ -144,7 +144,7 @@ async function handleProfileSave(request: Request, env: Env): Promise<Response> 
   try {
     body = await request.json() as ProfilePayload
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'JSON invalide' }), { status: 400, headers: CORS })
   }
   const userId = authedUserId ?? body.userId
   if (!userId) {
@@ -191,10 +191,10 @@ async function handleHandoffRedeem(token: string, env: Env): Promise<Response> {
 
   const raw = await env.ALERT_STORE.get(`handoff:${token}`)
   if (!raw) {
-    return new Response(JSON.stringify({ error: 'Token invalide ou expiré' }), { status: 404, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Jeton invalide ou expiré' }), { status: 404, headers: CORS })
   }
 
-  // One-time use — delete immediately
+  // One-time use â€” delete immediately
   await env.ALERT_STORE.delete(`handoff:${token}`)
 
   const data = JSON.parse(raw) as { userId: string; sessionToken: string; profileSnapshot: unknown }
@@ -203,11 +203,11 @@ async function handleHandoffRedeem(token: string, env: Env): Promise<Response> {
 
 async function handleProfileGet(userId: string, env: Env): Promise<Response> {
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
   }
   const raw = await env.ALERT_STORE.get(`profile:${userId}`)
   if (!raw) {
-    return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Introuvable' }), { status: 404, headers: CORS })
   }
   return new Response(raw, { status: 200, headers: CORS })
 }
@@ -292,7 +292,7 @@ async function handleAuthRequest(request: Request, env: Env): Promise<Response> 
         <div style="font-size:36px;font-weight:700;letter-spacing:0.15em;color:#e85d26;margin:0 0 20px">${otp}</div>
         <p style="margin:0 0 16px;color:#44403c">Ou clique directement :</p>
         <a href="${magicLink}" style="display:inline-block;background:#e85d26;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600">Connexion automatique</a>
-        <p style="margin:20px 0 0;font-size:12px;color:#a8a29e">Valable 15 minutes. Si tu n'es pas à l'origine de cette demande, ignore cet email.</p>
+        <p style="margin:20px 0 0;font-size:12px;color:#a8a29e">Valable 15 minutes. Si tu n'es pas Ã  l'origine de cette demande, ignore cet email.</p>
       </div>
     </div>`
   )
@@ -361,7 +361,7 @@ async function handleStravaAuth(request: Request, env: Env): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
   }
 
   const state = `${userId}:${generateState()}`
@@ -438,7 +438,7 @@ async function refreshStravaToken(env: Env, tokens: StravaTokens): Promise<Strav
       grant_type: 'refresh_token',
     }),
   })
-  if (!res.ok) throw new Error('Token refresh failed')
+  if (!res.ok) throw new Error('Échec du rafraîchissement du jeton')
   const data = await res.json() as StravaTokens
   return { ...tokens, access_token: data.access_token, refresh_token: data.refresh_token, expires_at: data.expires_at }
 }
@@ -447,12 +447,12 @@ async function handleStravaActivities(request: Request, env: Env): Promise<Respo
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'Missing userId' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
   }
 
   const raw = await env.ALERT_STORE.get(stravaKey(userId))
   if (!raw) {
-    return new Response(JSON.stringify({ error: 'Not connected' }), { status: 401, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Compte non connecté' }), { status: 401, headers: CORS })
   }
 
   let tokens = JSON.parse(raw) as StravaTokens
@@ -463,7 +463,7 @@ async function handleStravaActivities(request: Request, env: Env): Promise<Respo
       tokens = await refreshStravaToken(env, tokens)
       await env.ALERT_STORE.put(stravaKey(userId), JSON.stringify(tokens))
     } catch {
-      return new Response(JSON.stringify({ error: 'Token refresh failed' }), { status: 401, headers: CORS })
+      return new Response(JSON.stringify({ error: 'Échec du rafraîchissement du jeton' }), { status: 401, headers: CORS })
     }
   }
 
@@ -518,7 +518,7 @@ async function handleTestNotify(request: Request, env: Env): Promise<Response> {
   if (body.pushSubscription) {
     await sendWebPush(env, body.pushSubscription, {
       title: '🚴 Ride & Maintain',
-      body: 'Push notifications are working! You\'ll get maintenance alerts here.',
+      body: 'Les notifications fonctionnent. Tu recevras ici tes rappels d’entretien.',
       tag: 'test',
     })
   }
@@ -527,10 +527,10 @@ async function handleTestNotify(request: Request, env: Env): Promise<Response> {
     await sendEmail(
       env.RESEND_API_KEY,
       body.email,
-      'Bike Maintenance — Test',
+      'Entretien vélo — Test',
       `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
         <h2 style="color:#e85d26;margin:0 0 8px">Ride &amp; Maintain</h2>
-        <p>Your email notifications are working correctly. You'll receive maintenance alerts here every morning when something is due.</p>
+        <p>Les notifications par email fonctionnent correctement. Tu recevras ici tes rappels d'entretien chaque matin lorsqu'une intervention sera due.</p>
       </div>`
     )
   }
@@ -565,12 +565,12 @@ async function handleCron(env: Env): Promise<void> {
         const overdue = filtered.filter((c) => c.status === 'overdue').length
         const soon = filtered.filter((c) => c.status === 'soon').length
         const parts: string[] = []
-        if (overdue) parts.push(`${overdue} overdue`)
-        if (soon) parts.push(`${soon} due soon`)
+        if (overdue) parts.push(`${overdue} en retard`)
+        if (soon) parts.push(`${soon} bientôt dus`)
         await sendWebPush(env, pushSubscription, {
-          title: `🚴 Bike maintenance: ${parts.join(', ')}`,
+          title: `🚴 Entretien vélo : ${parts.join(', ')}`,
           body: filtered.slice(0, 3).map((c) => `${c.componentName} — ${c.detail}`).join('\n'),
-          tag: 'bike-maintenance-daily',
+          tag: 'entretien-velo-quotidien',
         })
       }
 
@@ -671,7 +671,7 @@ async function encryptWebPush(
     'raw', p256dh, { name: 'ECDH', namedCurve: 'P-256' }, true, []
   )
 
-  // Ephemeral sender key pair — cast to CryptoKeyPair since we asked for both usages
+  // Ephemeral sender key pair â€” cast to CryptoKeyPair since we asked for both usages
   const senderPair = (await crypto.subtle.generateKey(
     { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
   )) as CryptoKeyPair
@@ -686,7 +686,7 @@ async function encryptWebPush(
 
   const salt = crypto.getRandomValues(new Uint8Array(16))
 
-  // RFC 8291: IKM via HKDF — salt=auth, info="WebPush: info\0" + receiverPub + senderPub
+  // RFC 8291: IKM via HKDF â€” salt=auth, info="WebPush: info\0" + receiverPub + senderPub
   const hkdfBase = await crypto.subtle.importKey('raw', sharedSecret, { name: 'HKDF' }, false, ['deriveBits'])
   const ikmInfo = concat(new TextEncoder().encode('WebPush: info\0'), concat(p256dh, senderPublicRaw))
   const ikm = new Uint8Array(await crypto.subtle.deriveBits(
@@ -694,7 +694,7 @@ async function encryptWebPush(
     hkdfBase, 256
   ))
 
-  // RFC 8188: CEK and nonce via HKDF — salt=salt, info=label
+  // RFC 8188: CEK and nonce via HKDF â€” salt=salt, info=label
   const hkdfIkm = await crypto.subtle.importKey('raw', ikm, { name: 'HKDF' }, false, ['deriveBits'])
   const cekBytes = new Uint8Array(await crypto.subtle.deriveBits(
     { name: 'HKDF', hash: 'SHA-256', salt, info: new TextEncoder().encode('Content-Encoding: aes128gcm\0') },
@@ -749,9 +749,9 @@ function buildEmailSubject(items: AlertComponentPayload[]): string {
   const overdue = items.filter((i) => i.status === 'overdue').length
   const soon = items.filter((i) => i.status === 'soon').length
   const parts: string[] = []
-  if (overdue) parts.push(`${overdue} overdue`)
-  if (soon) parts.push(`${soon} due soon`)
-  return `🚴 Bike maintenance: ${parts.join(', ')}`
+  if (overdue) parts.push(`${overdue} en retard`)
+  if (soon) parts.push(`${soon} bientôt dus`)
+  return `🚴 Entretien vélo : ${parts.join(', ')}`
 }
 
 function buildEmailHtml(items: AlertComponentPayload[]): string {
@@ -771,9 +771,9 @@ function buildEmailHtml(items: AlertComponentPayload[]): string {
       <table style="border-collapse:collapse;width:100%;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e5e0d8">
         <thead style="background:#f7f5f2">
           <tr>
-            <th style="text-align:left;padding:8px 12px;font-size:12px;color:#78716c;font-weight:600">Component</th>
-            <th style="text-align:left;padding:8px 12px;font-size:12px;color:#78716c;font-weight:600">Bike</th>
-            <th style="text-align:left;padding:8px 12px;font-size:12px;color:#78716c;font-weight:600">Status</th>
+            <th style="text-align:left;padding:8px 12px;font-size:12px;color:#78716c;font-weight:600">Composant</th>
+            <th style="text-align:left;padding:8px 12px;font-size:12px;color:#78716c;font-weight:600">Vélo</th>
+            <th style="text-align:left;padding:8px 12px;font-size:12px;color:#78716c;font-weight:600">Statut</th>
           </tr>
         </thead>
         <tbody>${rows.map((r) => row(r, color)).join('')}</tbody>
@@ -783,13 +783,14 @@ function buildEmailHtml(items: AlertComponentPayload[]): string {
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#f7f5f2">
       <div style="background:#fff;border-radius:12px;padding:24px;border:1px solid #e5e0d8">
         <h2 style="color:#e85d26;margin:0 0 4px;font-size:22px">Ride &amp; Maintain</h2>
-        <p style="color:#78716c;margin:0 0 20px;font-size:14px">Daily maintenance digest</p>
-        ${section('Overdue', '#dc2626', overdueRows)}
-        ${section('Due soon', '#d97706', soonRows)}
+        <p style="color:#78716c;margin:0 0 20px;font-size:14px">Récapitulatif quotidien de l'entretien</p>
+        ${section('En retard', '#dc2626', overdueRows)}
+        ${section('Bientôt dû', '#d97706', soonRows)}
         <hr style="margin:24px 0;border:none;border-top:1px solid #e5e0d8" />
         <p style="font-size:12px;color:#a8a29e;margin:0">
-          Remove your email from the Notification settings in the app to stop these alerts.
+          Retire ton email dans les réglages de notification de l'application pour arrêter ces alertes.
         </p>
       </div>
     </div>`
 }
+

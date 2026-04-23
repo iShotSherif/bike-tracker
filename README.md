@@ -1,34 +1,34 @@
-# Bike component tracker
+# Suivi des composants vélo
 
-Small web app to track cumulative kilometers per bike (from [Intervals.icu](https://intervals.icu)) and remind you when to service components: chain wax, brake check, etc.
+Petite application web pour suivre les kilomètres cumulés par vélo (depuis [Intervals.icu](https://intervals.icu)) et te rappeler quand entretenir les composants : cire de chaîne, contrôle des freins, etc.
 
-## Setup
+## Installation
 
 ```bash
 cd bike-tracker
 npm install
 ```
 
-## Run locally
+## Lancer en local
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:5173. Enter your Intervals.icu API key (Settings → Developer settings). It is stored only in your browser (localStorage).
+Ouvre `http://localhost:5173`. Saisis ta clé API Intervals.icu (`Settings → Developer settings`). Elle est stockée uniquement dans ton navigateur (`localStorage`).
 
-## Build for production
+## Build de production
 
 ```bash
 npm run build
 ```
 
-Output is in `dist/`. Serve with any static host (e.g. `npx serve dist`).
+La sortie est générée dans `dist/`. Tu peux la servir avec n'importe quel hébergement statique, par exemple `npx serve dist`.
 
-## Usage
+## Utilisation
 
-- **Load bikes**: Enter your API key and click “Load bikes”. Your bikes and their total distance from Intervals.icu appear.
-- **Add component**: For each bike, add items like “Chain wax” (e.g. every 3000 km), “Brake check” (every 5000 km). Optionally set “Last done at km” so the app can show “Due in X km” or “Overdue”.
-- **Mark done**: When you service a component, click “Done” to set “last done” to the current bike total km.
+- **Charger les vélos** : saisis ta clé API puis charge tes vélos. Tes vélos et leur distance totale depuis Intervals.icu s'affichent.
+- **Ajouter un composant** : pour chaque vélo, ajoute des éléments comme « Cire de chaîne » (par exemple tous les 3000 km) ou « Contrôle des freins » (tous les 5000 km). Tu peux aussi définir le kilométrage de départ pour afficher « plus que X km » ou « en retard ».
+- **Marquer comme fait** : quand tu entretiens un composant, clique sur « Fait » pour remettre son suivi au kilométrage actuel du vélo.
 
-All component data is stored in your browser only.
+Toutes les données de composants sont stockées uniquement dans ton navigateur.

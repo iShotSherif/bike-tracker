@@ -1,55 +1,86 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-import { useTracker } from '@/composables/useTracker'
-import BikeCard from '@/components/BikeCard.vue'
-import DashboardOverview from '@/components/DashboardOverview.vue'
-import AuthScreen from '@/components/AuthScreen.vue'
-import HandoffModal from '@/components/HandoffModal.vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AlertsView from '@/components/AlertsView.vue'
+import AuthScreen from '@/components/AuthScreen.vue'
+import BikeCard from '@/components/BikeCard.vue'
+import HandoffModal from '@/components/HandoffModal.vue'
+import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import { useTracker } from '@/composables/useTracker'
 
-const { apiKey, setApiKey, loading, error, bikes, loadAthlete, athlete, exportState, importState, pushProfileToCloud, resetAthlete, stravaConnected, connectStrava, loadStravaActivities, authToken, login, logout, alertComponents } = useTracker()
+const { t } = useI18n({ useScope: 'global' })
+
+const {
+  apiKey,
+  setApiKey,
+  loading,
+  error,
+  bikes,
+  loadAthlete,
+  athlete,
+  exportState,
+  importState,
+  pushProfileToCloud,
+  resetAthlete,
+  stravaConnected,
+  connectStrava,
+  loadStravaActivities,
+  authToken,
+  login,
+  logout,
+  alertComponents,
+} = useTracker()
 
 const keyInput = ref('')
 const showKey = ref(false)
-const importError = ref('')
 const showAuth = ref(false)
 const showHandoff = ref(false)
-const handoffBadge = ref('')
+const showHandoffBadge = ref(false)
 const currentView = ref<'dashboard' | 'alerts'>('dashboard')
+const bikeCountLabel = computed(() =>
+  bikes.value.length === 1
+    ? t('app.badges.bikeFoundSingle')
+    : t('app.badges.bikeFoundMultiple', { count: bikes.value.length }),
+)
 
-watch(apiKey, (v) => { keyInput.value = v }, { immediate: true })
+watch(apiKey, (value) => {
+  keyInput.value = value
+}, { immediate: true })
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
 
-  // QR handoff — restore session from token
   const handoffToken = params.get('handoff')
   if (handoffToken) {
     window.history.replaceState({}, '', window.location.pathname)
     const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
+
     if (workerUrl) {
       try {
-        const res = await fetch(`${workerUrl}/handoff/${handoffToken}`)
-        if (res.ok) {
-          const data = await res.json() as { sessionToken?: string; profileSnapshot?: Record<string, unknown> }
-          if (data.sessionToken) {
-            authToken.value = data.sessionToken
+        const response = await fetch(`${workerUrl}/handoff/${handoffToken}`)
+        if (response.ok) {
+          const data = await response.json() as {
+            sessionToken?: string
+            profileSnapshot?: Record<string, unknown>
           }
-          if (data.profileSnapshot) {
-            importState(JSON.stringify(data.profileSnapshot))
-          }
-          handoffBadge.value = 'Profil chargé sur cet appareil'
-          setTimeout(() => { handoffBadge.value = '' }, 4000)
+
+          if (data.sessionToken) authToken.value = data.sessionToken
+          if (data.profileSnapshot) importState(JSON.stringify(data.profileSnapshot))
+
+          showHandoffBadge.value = true
+          window.setTimeout(() => {
+            showHandoffBadge.value = false
+          }, 4000)
         }
-      } catch { /* best effort */ }
-    } else {
-      // no worker — nothing to redeem
+      } catch {
+        // best effort
+      }
     }
+
     if (apiKey.value.trim()) await loadAthlete()
     return
   }
 
-  // Fallback key pre-fill via ?key=
   const urlKey = params.get('key')
   if (urlKey) {
     window.history.replaceState({}, '', window.location.pathname)
@@ -58,13 +89,12 @@ onMounted(async () => {
     return
   }
 
-  // Magic link auto-login via URL params
   const urlOtp = params.get('otp')
   const urlEmail = params.get('email')
   if (urlOtp && urlEmail) {
     window.history.replaceState({}, '', window.location.pathname)
-    const ok = await login(urlEmail, urlOtp)
-    if (ok && apiKey.value.trim()) await loadAthlete()
+    const isLoggedIn = await login(urlEmail, urlOtp)
+    if (isLoggedIn && apiKey.value.trim()) await loadAthlete()
     return
   }
 
@@ -86,34 +116,38 @@ function onAuthDone() {
 
 function saveKey() {
   setApiKey(keyInput.value.trim())
-  loadAthlete()
+  void loadAthlete()
 }
 
 function skipConnection() {
-  athlete.value = { id: 'local', name: 'Local', bikes: [] } as any
+  athlete.value = { id: 'local', name: 'Local', bikes: [] } as typeof athlete.value
 }
 
 function downloadExport() {
   const blob = new Blob([exportState()], { type: 'application/json' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = 'ride-maintain-backup.json'
-  a.click()
-  URL.revokeObjectURL(a.href)
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = 'ride-maintain-backup.json'
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 function triggerImport() {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = '.json,application/json'
-  input.onchange = async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0]
+  input.onchange = async (event) => {
+    const file = (event.target as HTMLInputElement).files?.[0]
     if (!file) return
+
     const text = await file.text()
-    importError.value = ''
     importState(text)
-    if (!error.value) await pushProfileToCloud()
+
+    if (!error.value) {
+      await pushProfileToCloud()
+    }
   }
+
   input.click()
 }
 </script>
@@ -121,10 +155,16 @@ function triggerImport() {
 <template>
   <div class="app">
     <header class="header">
-      <div class="header-icon">🚴</div>
-      <div class="header-text">
-        <h1 class="title">Ride & Maintain</h1>
-        <p class="subtitle">Suis tes composants, note tes entretiens, roule sans surprise.</p>
+      <div class="header-main">
+        <div class="header-icon">🚴</div>
+        <div class="header-text">
+          <h1 class="title">{{ t('app.title') }}</h1>
+          <p class="subtitle">{{ t('app.subtitle') }}</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <LanguageSwitcher />
       </div>
     </header>
 
@@ -134,86 +174,102 @@ function triggerImport() {
     <section v-else-if="!athlete && !loading" class="setup">
       <div class="source-options">
         <div class="key-section">
-          <label for="api-key">Intervals.icu</label>
+          <label for="api-key">{{ t('app.setup.intervals.label') }}</label>
+
           <div class="key-row">
             <input
               id="api-key"
               v-model="keyInput"
               :type="showKey ? 'text' : 'password'"
-              placeholder="Colle ta clé ici"
+              :placeholder="t('app.setup.intervals.placeholder')"
               class="input key-input"
               @keydown.enter="saveKey"
             />
-            <button type="button" class="btn icon" @click="showKey = !showKey" :title="showKey ? 'Masquer' : 'Afficher'">
+
+            <button
+              type="button"
+              class="btn icon"
+              :title="showKey ? t('app.setup.intervals.togglePassword.hide') : t('app.setup.intervals.togglePassword.show')"
+              :aria-label="showKey ? t('app.setup.intervals.togglePassword.hide') : t('app.setup.intervals.togglePassword.show')"
+              @click="showKey = !showKey"
+            >
               {{ showKey ? '🙈' : '👁' }}
             </button>
+
             <button type="button" class="btn btn-primary" :disabled="loading" @click="saveKey">
-              {{ loading ? 'Connexion…' : 'Connecter' }}
+              {{ loading ? t('app.setup.intervals.connecting') : t('app.setup.intervals.connect') }}
             </button>
           </div>
+
           <p class="hint">
-            Accès en lecture seule. Tes données servent uniquement au calcul des rappels.
-            <a href="https://app.intervals.icu/settings#developer" target="_blank" class="hint-link">Où trouver ma clé ?</a>
+            {{ t('app.setup.intervals.hint') }}
+            <a href="https://app.intervals.icu/settings#developer" target="_blank" class="hint-link">
+              {{ t('app.setup.intervals.findKey') }}
+            </a>
           </p>
         </div>
 
-        <div class="source-divider"><span>ou</span></div>
+        <div class="source-divider"><span>{{ t('app.setup.or') }}</span></div>
 
         <div class="strava-section">
-          <label>Strava</label>
+          <label>{{ t('app.setup.strava.label') }}</label>
           <button type="button" class="btn btn-strava" :disabled="loading" @click="connectStrava">
-            <svg class="strava-logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-            Connecter Strava
+            <svg class="strava-logo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" /></svg>
+            {{ t('app.setup.strava.connect') }}
           </button>
-          <p class="hint">Connexion via OAuth — aucun mot de passe stocké.</p>
+          <p class="hint">{{ t('app.setup.strava.hint') }}</p>
         </div>
       </div>
 
       <div class="auth-row">
-        <span v-if="authToken" class="auth-badge">✓ Connecté</span>
+        <span v-if="authToken" class="auth-badge">✓ {{ t('app.setup.auth.connected') }}</span>
         <button v-else type="button" class="btn btn-link" @click="showAuth = true">
-          Se connecter pour sync multi-appareils →
+          {{ t('app.setup.auth.syncLogin') }}
         </button>
       </div>
+
       <button type="button" class="btn btn-link" @click="skipConnection">
-        Continuer sans connexion →
+        {{ t('app.setup.auth.continueWithoutConnection') }}
       </button>
+
       <p v-if="error" class="error">{{ error }}</p>
     </section>
 
     <section v-else class="main">
       <div v-if="error" class="error">{{ error }}</div>
-      <div v-if="loading" class="loading">Chargement…</div>
+      <div v-if="loading" class="loading">{{ t('common.loading') }}</div>
+
       <template v-else>
-        <div v-if="handoffBadge" class="handoff-badge">✓ {{ handoffBadge }}</div>
+        <div v-if="showHandoffBadge" class="handoff-badge">✓ {{ t('app.badges.handoffLoaded') }}</div>
+
         <div v-if="bikes.length" class="connection-badges">
-          <span v-if="apiKey" class="connection-badge">✓ Intervals.icu</span>
-          <span v-if="stravaConnected" class="connection-badge strava-badge">✓ Strava</span>
-          <span class="badge-detail">— {{ bikes.length }} vélo{{ bikes.length > 1 ? 's' : '' }} trouvé{{ bikes.length > 1 ? 's' : '' }}</span>
+          <span v-if="apiKey" class="connection-badge">✓ {{ t('app.badges.intervals') }}</span>
+          <span v-if="stravaConnected" class="connection-badge strava-badge">✓ {{ t('app.badges.strava') }}</span>
+          <span class="badge-detail">- {{ bikeCountLabel }}</span>
         </div>
 
         <nav class="tabs">
-          <button
-            :class="['tab', { active: currentView === 'dashboard' }]"
-            @click="currentView = 'dashboard'"
-          >
-            Mes vélos
+          <button :class="['tab', { active: currentView === 'dashboard' }]" @click="currentView = 'dashboard'">
+            {{ t('app.tabs.bikes') }}
           </button>
-          <button
-            :class="['tab', { active: currentView === 'alerts' }]"
-            @click="currentView = 'alerts'"
-          >
-            Alertes
+
+          <button :class="['tab', { active: currentView === 'alerts' }]" @click="currentView = 'alerts'">
+            {{ t('app.tabs.alerts') }}
             <span v-if="alertComponents.length" class="tab-badge">{{ alertComponents.length }}</span>
           </button>
         </nav>
 
         <template v-if="currentView === 'dashboard'">
-          <DashboardOverview />
           <div class="bike-grid">
             <BikeCard v-for="bike in bikes" :key="bike.id" :bike="bike" :id="`bike-${bike.id}`" />
+
             <div v-if="!bikes.length" class="empty-state">
-              <p>Aucun vélo connecté. <button type="button" class="btn btn-link" @click="resetAthlete">Connecter Intervals.icu</button></p>
+              <p>
+                {{ t('app.empty.noBikes') }}
+                <button type="button" class="btn btn-link" @click="resetAthlete">
+                  {{ t('app.empty.connectIntervals') }}
+                </button>
+              </p>
             </div>
           </div>
         </template>
@@ -222,13 +278,17 @@ function triggerImport() {
       </template>
 
       <div class="footer-actions">
-        <button v-if="apiKey" type="button" class="btn secondary" @click="loadAthlete">Actualiser Intervals.icu</button>
-        <button v-if="stravaConnected" type="button" class="btn secondary" @click="loadStravaActivities">Actualiser Strava</button>
-        <button type="button" class="btn secondary" @click="downloadExport">Exporter mes données</button>
-        <button type="button" class="btn secondary" @click="triggerImport">Importer</button>
-        <button type="button" class="btn secondary" @click="showHandoff = true">Ouvrir sur mon téléphone</button>
-        <button v-if="authToken" type="button" class="btn secondary" @click="logout">Se déconnecter</button>
-        <button v-else type="button" class="btn secondary" @click="showAuth = true">Se connecter</button>
+        <button v-if="apiKey" type="button" class="btn secondary" @click="loadAthlete">
+          {{ t('app.actions.refreshIntervals') }}
+        </button>
+        <button v-if="stravaConnected" type="button" class="btn secondary" @click="loadStravaActivities">
+          {{ t('app.actions.refreshStrava') }}
+        </button>
+        <button type="button" class="btn secondary" @click="downloadExport">{{ t('app.actions.export') }}</button>
+        <button type="button" class="btn secondary" @click="triggerImport">{{ t('app.actions.import') }}</button>
+        <button type="button" class="btn secondary" @click="showHandoff = true">{{ t('app.actions.openOnPhone') }}</button>
+        <button v-if="authToken" type="button" class="btn secondary" @click="logout">{{ t('app.actions.logout') }}</button>
+        <button v-else type="button" class="btn secondary" @click="showAuth = true">{{ t('app.actions.login') }}</button>
       </div>
     </section>
   </div>
@@ -241,19 +301,34 @@ function triggerImport() {
   max-width: 860px;
   margin: 0 auto;
 }
+
 .header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 1rem;
   margin-bottom: 2rem;
   padding-bottom: 1.25rem;
   border-bottom: 2px solid var(--border);
 }
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .header-icon {
   font-size: 2.25rem;
   line-height: 1;
   flex-shrink: 0;
 }
+
 .title {
   font-size: 1.6rem;
   font-weight: 700;
@@ -261,17 +336,20 @@ function triggerImport() {
   letter-spacing: -0.02em;
   color: var(--text);
 }
+
 .subtitle {
   color: var(--muted);
   font-size: 0.88rem;
   margin: 0;
 }
+
 .setup {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   max-width: 480px;
 }
+
 .source-options {
   display: flex;
   flex-direction: column;
@@ -281,10 +359,14 @@ function triggerImport() {
   overflow: hidden;
   background: var(--surface);
 }
-.key-section, .strava-section {
+
+.key-section,
+.strava-section {
   padding: 1rem 1.25rem;
 }
-.key-section label, .strava-section label {
+
+.key-section label,
+.strava-section label {
   display: block;
   font-size: 0.78rem;
   font-weight: 700;
@@ -293,6 +375,7 @@ function triggerImport() {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
 .source-divider {
   display: flex;
   align-items: center;
@@ -302,12 +385,15 @@ function triggerImport() {
   font-size: 0.75rem;
   font-weight: 600;
 }
-.source-divider::before, .source-divider::after {
+
+.source-divider::before,
+.source-divider::after {
   content: '';
   flex: 1;
   height: 1px;
   background: var(--border);
 }
+
 .btn-strava {
   display: inline-flex;
   align-items: center;
@@ -323,9 +409,23 @@ function triggerImport() {
   font-family: inherit;
   transition: background 0.15s, border-color 0.15s;
 }
-.btn-strava:hover:not(:disabled) { background: #e04300; border-color: #e04300; }
-.btn-strava:disabled { opacity: 0.5; cursor: not-allowed; }
-.strava-logo { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+.btn-strava:hover:not(:disabled) {
+  background: #e04300;
+  border-color: #e04300;
+}
+
+.btn-strava:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.strava-logo {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
 .connection-badges {
   display: flex;
   align-items: center;
@@ -333,6 +433,7 @@ function triggerImport() {
   flex-wrap: wrap;
   margin-bottom: 1rem;
 }
+
 .connection-badge {
   font-size: 0.78rem;
   font-weight: 600;
@@ -342,14 +443,30 @@ function triggerImport() {
   border-radius: 5px;
   padding: 0.15rem 0.5rem;
 }
-.strava-badge { color: #fc4c02; background: #fff5f0; border-color: #fc4c02; }
-.badge-detail { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+
+.strava-badge {
+  color: #fc4c02;
+  background: #fff5f0;
+  border-color: #fc4c02;
+}
+
+.badge-detail {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
 .key-row {
   display: flex;
   gap: 0.5rem;
   align-items: center;
 }
-.key-input { flex: 1; min-width: 0; }
+
+.key-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .input {
   padding: 0.55rem 0.85rem;
   border: 1.5px solid var(--border);
@@ -359,7 +476,12 @@ function triggerImport() {
   font-size: 0.95rem;
   transition: border-color 0.15s;
 }
-.input:focus { outline: none; border-color: var(--accent); }
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .btn {
   padding: 0.55rem 1rem;
   border-radius: var(--radius-sm);
@@ -371,23 +493,74 @@ function triggerImport() {
   font-weight: 500;
   transition: background 0.15s, border-color 0.15s;
 }
-.btn:hover:not(:disabled) { background: var(--bg); border-color: var(--muted); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn.icon { padding: 0.55rem 0.7rem; }
+
+.btn:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--muted);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn.icon {
+  padding: 0.55rem 0.7rem;
+}
+
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
   font-weight: 600;
 }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
-.btn.secondary { color: var(--muted); border-color: transparent; background: transparent; }
-.btn.secondary:hover { color: var(--accent); background: var(--accent-light); }
-.hint { font-size: 0.78rem; color: var(--muted); margin: 0.4rem 0 0 0; line-height: 1.6; }
-.hint-link { color: var(--accent); text-decoration: none; }
-.hint-link:hover { text-decoration: underline; }
-.error { color: var(--danger); font-size: 0.88rem; margin: 0; background: var(--danger-light); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); }
-.loading { color: var(--muted); font-size: 0.9rem; }
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn.secondary {
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn.secondary:hover {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0.4rem 0 0 0;
+  line-height: 1.6;
+}
+
+.hint-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.hint-link:hover {
+  text-decoration: underline;
+}
+
+.error {
+  color: var(--danger);
+  font-size: 0.88rem;
+  margin: 0;
+  background: var(--danger-light);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.loading {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .btn-link {
   background: none;
   border: none;
@@ -400,29 +573,30 @@ function triggerImport() {
   display: inline-block;
   margin-top: 0.5rem;
 }
-.btn-link:hover { text-decoration: underline; }
-.connection-badge {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--ok, #16a34a);
-  margin-bottom: 1rem;
+
+.btn-link:hover {
+  text-decoration: underline;
 }
+
 .bike-grid {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
+
 .empty-state {
   color: var(--muted);
   font-size: 0.9rem;
   padding: 1.5rem 0;
 }
+
 .footer-actions {
   margin-top: 1.5rem;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
 .tabs {
   display: flex;
   gap: 0.25rem;
@@ -430,6 +604,7 @@ function triggerImport() {
   border-bottom: 2px solid var(--border);
   padding-bottom: 0;
 }
+
 .tab {
   padding: 0.5rem 1rem;
   border: none;
@@ -446,8 +621,17 @@ function triggerImport() {
   gap: 0.4rem;
   transition: color 0.12s;
 }
-.tab:hover { color: var(--text); }
-.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
 .tab-badge {
   display: inline-flex;
   align-items: center;
@@ -461,6 +645,7 @@ function triggerImport() {
   font-size: 0.68rem;
   font-weight: 700;
 }
+
 .handoff-badge {
   font-size: 0.82rem;
   font-weight: 600;
@@ -468,8 +653,26 @@ function triggerImport() {
   margin-bottom: 0.75rem;
   animation: fadeIn 0.3s ease;
 }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.auth-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.auth-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
 .auth-badge {
   font-size: 0.78rem;
   font-weight: 600;
@@ -478,5 +681,15 @@ function triggerImport() {
   border: 1.5px solid var(--ok, #16a34a);
   border-radius: 5px;
   padding: 0.15rem 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .header-main {
+    width: 100%;
+  }
 }
 </style>

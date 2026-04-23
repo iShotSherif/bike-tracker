@@ -1,60 +1,91 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import NotificationSettingsPanel from '@/components/NotificationSettings.vue'
 import { useTracker } from '@/composables/useTracker'
-import { alertDetail as _alertDetail } from '@/utils/status'
 import { todayISO } from '@/utils/date'
+import { getComponentLabel } from '@/utils/componentPresets'
 import type { ComponentStatus } from '@/utils/status'
 
+const { t } = useI18n({ useScope: 'global' })
 const { alertComponents, kmAtDate, markComponentDone, serviceLog, bikes } = useTracker()
-
-// Notification settings are imported from the existing component
-import NotificationSettingsPanel from '@/components/NotificationSettings.vue'
-
-function alertDetail(bikeId: string, c: Parameters<typeof _alertDetail>[0]): string {
-  return _alertDetail(c, kmAtDate(bikeId, todayISO()), kmAtDate(bikeId, c.dateStarted))
-}
 
 const doneIds = ref<Set<string>>(new Set())
 const collapsingIds = ref<Set<string>>(new Set())
+const recentLog = computed(() => serviceLog.value.slice(0, 10))
+
+function alertDetail(
+  bikeId: string,
+  component: {
+    intervalKm?: number
+    intervalDays?: number
+    dateStarted: string
+  },
+): string {
+  const parts: string[] = []
+  const currentKm = kmAtDate(bikeId, todayISO())
+  const startKm = kmAtDate(bikeId, component.dateStarted)
+
+  if (component.intervalKm) {
+    const used = Math.floor(Math.max(0, currentKm - startKm))
+    const left = component.intervalKm - used
+    parts.push(left <= 0
+      ? t('alerts.detail.kmOverdue', { count: Math.abs(left) })
+      : t('alerts.detail.kmRemaining', { count: left }))
+  }
+
+  if (component.intervalDays) {
+    const startMs = new Date(component.dateStarted).getTime()
+    const nowMs = new Date(todayISO()).getTime()
+    const elapsed = Math.floor((nowMs - startMs) / (24 * 60 * 60 * 1000))
+    const left = component.intervalDays - elapsed
+    parts.push(left <= 0
+      ? Math.abs(left) === 1
+        ? t('alerts.detail.daysOverdueSingle')
+        : t('alerts.detail.daysOverdueMultiple', { count: Math.abs(left) })
+      : left === 1
+        ? t('alerts.detail.daysRemainingSingle')
+        : t('alerts.detail.daysRemainingMultiple', { count: left }))
+  }
+
+  return parts.join(' - ')
+}
 
 function markDone(bikeId: string, componentId: string, bikeCurrentKm: number) {
   doneIds.value = new Set([...doneIds.value, componentId])
   markComponentDone(bikeId, componentId, bikeCurrentKm)
-  setTimeout(() => {
+
+  window.setTimeout(() => {
     collapsingIds.value = new Set([...collapsingIds.value, componentId])
   }, 1400)
 }
 
-const statusLabel: Record<ComponentStatus, string> = {
-  ok: 'OK',
-  watch: 'À surveiller',
-  soon: 'À contrôler',
-  overdue: 'À remplacer',
-}
-
-const statusClass: Record<ComponentStatus, string> = {
-  ok: '',
-  watch: 'badge-watch',
-  soon: 'badge-soon',
-  overdue: 'badge-overdue',
-}
-
-const recentLog = computed(() => serviceLog.value.slice(0, 10))
-
 function bikeName(bikeId: string): string {
-  return bikes.value.find((b) => b.id === bikeId)?.name ?? bikeId
+  return bikes.value.find((bike) => bike.id === bikeId)?.name ?? bikeId
+}
+
+function statusLabel(status: ComponentStatus): string {
+  return t(`alerts.status.${status}`)
+}
+
+function statusClass(status: ComponentStatus): string {
+  if (status === 'watch') return 'badge-watch'
+  if (status === 'soon') return 'badge-soon'
+  if (status === 'overdue') return 'badge-overdue'
+  return ''
 }
 </script>
 
 <template>
   <div class="alerts-view">
-    <!-- Section 1: Active alerts -->
     <section class="section">
-      <h2 class="section-title">Mes alertes actives</h2>
+      <h2 class="section-title">{{ t('alerts.title') }}</h2>
+
       <div v-if="alertComponents.length === 0" class="empty-ok">
         <span class="ok-dot"></span>
-        Tous les composants sont OK
+        {{ t('alerts.emptyOk') }}
       </div>
+
       <div v-else class="alert-list">
         <transition-group name="row">
           <div
@@ -64,43 +95,47 @@ function bikeName(bikeId: string): string {
             :class="['alert-row', `row-${item.status}`, { 'row-done': doneIds.has(item.component.id) }]"
           >
             <div class="alert-row-left">
-              <span class="row-name">{{ item.component.name }}</span>
+              <span class="row-name">{{ getComponentLabel(item.component.name, t) }}</span>
               <span class="row-bike">{{ item.bikeName }}</span>
             </div>
+
             <div class="alert-row-right">
-              <span :class="['status-badge', statusClass[item.status as ComponentStatus]]">
-                {{ statusLabel[item.status as ComponentStatus] }}
+              <span :class="['status-badge', statusClass(item.status as ComponentStatus)]">
+                {{ statusLabel(item.status as ComponentStatus) }}
               </span>
+
               <span class="row-detail">{{ alertDetail(item.bikeId, item.component) }}</span>
+
               <button
                 v-if="!doneIds.has(item.component.id)"
                 class="btn-done"
                 @click="markDone(item.bikeId, item.component.id, kmAtDate(item.bikeId, todayISO()))"
               >
-                Fait aujourd'hui
+                {{ t('alerts.markDoneToday') }}
               </button>
-              <span v-else class="done-confirm">✓ Remis à zéro</span>
+
+              <span v-else class="done-confirm">✓ {{ t('alerts.resetDone') }}</span>
             </div>
           </div>
         </transition-group>
       </div>
     </section>
 
-    <!-- Section 2: Notification settings -->
     <section class="section">
-      <h2 class="section-title">Réglages des rappels</h2>
+      <h2 class="section-title">{{ t('alerts.settingsTitle') }}</h2>
       <NotificationSettingsPanel :inline="true" />
     </section>
 
-    <!-- Section 3: Service history -->
     <section class="section">
-      <h2 class="section-title">Historique des interventions</h2>
-      <div v-if="recentLog.length === 0" class="empty-log">Aucune intervention enregistrée.</div>
+      <h2 class="section-title">{{ t('alerts.historyTitle') }}</h2>
+
+      <div v-if="recentLog.length === 0" class="empty-log">{{ t('alerts.emptyHistory') }}</div>
+
       <div v-else class="log-list">
         <div v-for="entry in recentLog" :key="entry.id" class="log-row">
           <span class="log-date">{{ entry.date }}</span>
           <span class="log-bike">{{ bikeName(entry.bikeId) }}</span>
-          <span class="log-component">{{ entry.notes ?? 'Entretien' }}</span>
+          <span class="log-component">{{ entry.notes ?? t('alerts.defaultServiceNote') }}</span>
           <span class="log-km">{{ entry.kmAtService.toFixed(0) }} km</span>
         </div>
       </div>
@@ -114,12 +149,14 @@ function bikeName(bikeId: string): string {
   flex-direction: column;
   gap: 1.5rem;
 }
+
 .section {
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
 }
+
 .section-title {
   font-size: 0.82rem;
   font-weight: 700;
@@ -131,7 +168,6 @@ function bikeName(bikeId: string): string {
   border-bottom: 1.5px solid var(--border);
 }
 
-/* Alert list */
 .empty-ok {
   display: flex;
   align-items: center;
@@ -141,8 +177,20 @@ function bikeName(bikeId: string): string {
   color: var(--ok);
   font-weight: 600;
 }
-.ok-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex-shrink: 0; }
-.alert-list { display: flex; flex-direction: column; }
+
+.ok-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex-shrink: 0;
+}
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .alert-row {
   display: flex;
   align-items: center;
@@ -152,14 +200,49 @@ function bikeName(bikeId: string): string {
   flex-wrap: wrap;
   transition: background 0.2s, opacity 0.4s, max-height 0.4s;
 }
-.alert-row:last-child { border-bottom: none; }
-.row-overdue { border-left: 3px solid var(--danger); background: var(--danger-light); }
-.row-soon { border-left: 3px solid var(--warning); background: var(--warning-light); }
-.row-watch { border-left: 3px solid #eab308; background: #fefce8; }
-.row-done { background: var(--ok-light, #f0fdf4) !important; border-left-color: var(--ok) !important; }
-.alert-row-left { display: flex; flex-direction: column; gap: 0.1rem; min-width: 9rem; }
-.row-name { font-weight: 600; font-size: 0.9rem; color: var(--text); }
-.row-bike { font-size: 0.78rem; color: var(--muted); }
+
+.alert-row:last-child {
+  border-bottom: none;
+}
+
+.row-overdue {
+  border-left: 3px solid var(--danger);
+  background: var(--danger-light);
+}
+
+.row-soon {
+  border-left: 3px solid var(--warning);
+  background: var(--warning-light);
+}
+
+.row-watch {
+  border-left: 3px solid #eab308;
+  background: #fefce8;
+}
+
+.row-done {
+  background: var(--ok-light, #f0fdf4) !important;
+  border-left-color: var(--ok) !important;
+}
+
+.alert-row-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 9rem;
+}
+
+.row-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.row-bike {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .alert-row-right {
   display: flex;
   align-items: center;
@@ -167,6 +250,7 @@ function bikeName(bikeId: string): string {
   flex-wrap: wrap;
   margin-left: auto;
 }
+
 .status-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -176,10 +260,28 @@ function bikeName(bikeId: string): string {
   border-radius: 4px;
   white-space: nowrap;
 }
-.badge-overdue { background: var(--danger); color: #fff; }
-.badge-soon { background: var(--warning); color: #fff; }
-.badge-watch { background: #eab308; color: #fff; }
-.row-detail { font-size: 0.78rem; color: var(--muted); font-family: var(--font-mono, monospace); }
+
+.badge-overdue {
+  background: var(--danger);
+  color: #fff;
+}
+
+.badge-soon {
+  background: var(--warning);
+  color: #fff;
+}
+
+.badge-watch {
+  background: #eab308;
+  color: #fff;
+}
+
+.row-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--font-mono, monospace);
+}
+
 .btn-done {
   padding: 0.3rem 0.75rem;
   border-radius: var(--radius-sm);
@@ -193,25 +295,55 @@ function bikeName(bikeId: string): string {
   white-space: nowrap;
   transition: background 0.15s, color 0.15s;
 }
-.btn-done:hover { background: var(--accent); color: #fff; }
+
+.btn-done:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 .done-confirm {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--ok);
   animation: popIn 0.3s ease;
 }
+
 @keyframes popIn {
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* Row collapse animation */
-.row-leave-active { transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.4s ease; overflow: hidden; max-height: 100px; }
-.row-leave-to { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
+.row-leave-active {
+  transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.4s ease;
+  overflow: hidden;
+  max-height: 100px;
+}
 
-/* Log */
-.empty-log { padding: 1rem 1.25rem; font-size: 0.85rem; color: var(--muted); }
-.log-list { display: flex; flex-direction: column; }
+.row-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.empty-log {
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+}
+
 .log-row {
   display: flex;
   gap: 1rem;
@@ -221,9 +353,31 @@ function bikeName(bikeId: string): string {
   flex-wrap: wrap;
   align-items: center;
 }
-.log-row:last-child { border-bottom: none; }
-.log-date { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 0.8rem; min-width: 6rem; }
-.log-bike { color: var(--muted); font-size: 0.8rem; }
-.log-component { font-weight: 500; flex: 1; }
-.log-km { color: var(--muted); font-size: 0.8rem; margin-left: auto; }
+
+.log-row:last-child {
+  border-bottom: none;
+}
+
+.log-date {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  min-width: 6rem;
+}
+
+.log-bike {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.log-component {
+  font-weight: 500;
+  flex: 1;
+}
+
+.log-km {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: auto;
+}
 </style>

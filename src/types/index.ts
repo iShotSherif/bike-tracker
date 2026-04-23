@@ -53,6 +53,13 @@ export interface NotificationSettings {
   alertLevel?: 'overdue-only' | 'soon-and-overdue'
 }
 
+export interface HotspotPosition {
+  leftPct: number
+  topPct: number
+}
+
+export type BikeVisualType = 'road' | 'gravel' | 'mtb'
+
 export interface AlertComponentPayload {
   componentName: string
   bikeName: string
@@ -72,6 +79,8 @@ export interface TrackerState {
   authToken?: string
   stravaConnected?: boolean
   componentsByBike: Record<string, BikeComponent[]>
+  hotspotPositionsByBike: Record<string, Partial<Record<BikeVisualType, Record<string, HotspotPosition>>>>
+  bikeVisualByBike: Record<string, BikeVisualType>
   serviceLog: ServiceLogEntry[]
   notificationSettings?: NotificationSettings
 }

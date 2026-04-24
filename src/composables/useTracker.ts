@@ -361,6 +361,7 @@ async function login(email: string, otp: string): Promise<boolean> {
     })
     if (!res.ok) return false
     const data = await res.json() as { token: string; userId: string }
+    userId.value = data.userId
     authToken.value = data.token
     persist()
     await pullProfileFromCloud()

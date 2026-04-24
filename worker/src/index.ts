@@ -481,14 +481,9 @@ async function refreshStravaToken(env: Env, tokens: StravaTokens): Promise<Strav
 }
 
 async function handleStravaActivities(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
-  const authedUserId = await getUserIdFromRequest(request, env)
-  if (!authedUserId) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
-  }
-
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
-  if (!userId || userId !== authedUserId) {
+  if (!userId) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
   }
 

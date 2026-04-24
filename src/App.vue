@@ -5,7 +5,6 @@ import { Settings } from 'lucide-vue-next'
 import AuthScreen from '@/components/AuthScreen.vue'
 import BikeCard from '@/components/BikeCard.vue'
 import ConnectionBadges from '@/components/ConnectionBadges.vue'
-import FooterActions from '@/components/FooterActions.vue'
 import HandoffModal from '@/components/HandoffModal.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import SettingsView from '@/components/SettingsView.vue'
@@ -171,19 +170,18 @@ function toggleSettings() {
           </div>
         </div>
 
-        <SettingsView v-else />
+        <SettingsView
+          v-else
+          :auth-token="authToken"
+          :show-refresh-strava="stravaConnected"
+          @download-export="downloadExport"
+          @logout="logout"
+          @open-auth="showAuth = true"
+          @open-handoff="showHandoff = true"
+          @refresh-strava="loadStravaActivities"
+          @trigger-import="triggerImport"
+        />
       </template>
-
-      <FooterActions
-        :auth-token="authToken"
-        :show-refresh-strava="stravaConnected"
-        @download-export="downloadExport"
-        @logout="logout"
-        @open-auth="showAuth = true"
-        @open-handoff="showHandoff = true"
-        @refresh-strava="loadStravaActivities"
-        @trigger-import="triggerImport"
-      />
     </section>
   </div>
 </template>

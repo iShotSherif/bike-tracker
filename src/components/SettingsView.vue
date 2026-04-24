@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { Download, LogIn, LogOut, RefreshCw, Smartphone, Upload } from 'lucide-vue-next'
 import NotificationSettingsPanel from '@/components/NotificationSettings.vue'
 import { useTracker } from '@/composables/useTracker'
+
+const props = defineProps<{
+  authToken: string
+  showRefreshStrava?: boolean
+}>()
+
+const emit = defineEmits<{
+  downloadExport: []
+  logout: []
+  openAuth: []
+  openHandoff: []
+  refreshStrava: []
+  triggerImport: []
+}>()
 
 const { t, locale } = useI18n({ useScope: 'global' })
 const { serviceLog, bikes } = useTracker()
@@ -19,6 +34,37 @@ function bikeName(bikeId: string): string {
     <section class="section">
       <h2 class="section-title">{{ t('alerts.settingsTitle') }}</h2>
       <NotificationSettingsPanel :inline="true" />
+    </section>
+
+    <section class="section utility-section">
+      <h2 class="section-title">{{ t('settings.dataTitle') }}</h2>
+
+      <div class="utility-list">
+        <button v-if="props.showRefreshStrava" type="button" class="utility-action" @click="emit('refreshStrava')">
+          <RefreshCw :size="16" stroke-width="2.2" />
+          <span>{{ t('app.actions.refreshStrava') }}</span>
+        </button>
+        <button type="button" class="utility-action" @click="emit('downloadExport')">
+          <Download :size="16" stroke-width="2.2" />
+          <span>{{ t('app.actions.export') }}</span>
+        </button>
+        <button type="button" class="utility-action" @click="emit('triggerImport')">
+          <Upload :size="16" stroke-width="2.2" />
+          <span>{{ t('app.actions.import') }}</span>
+        </button>
+        <button type="button" class="utility-action" @click="emit('openHandoff')">
+          <Smartphone :size="16" stroke-width="2.2" />
+          <span>{{ t('app.actions.openOnPhone') }}</span>
+        </button>
+        <button v-if="props.authToken" type="button" class="utility-action" @click="emit('logout')">
+          <LogOut :size="16" stroke-width="2.2" />
+          <span>{{ t('app.actions.logout') }}</span>
+        </button>
+        <button v-else type="button" class="utility-action" @click="emit('openAuth')">
+          <LogIn :size="16" stroke-width="2.2" />
+          <span>{{ t('app.actions.login') }}</span>
+        </button>
+      </div>
     </section>
 
     <section class="section">
@@ -69,6 +115,43 @@ function bikeName(bikeId: string): string {
   color: var(--muted);
 }
 
+.utility-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.85rem;
+}
+
+.utility-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.utility-action span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.utility-action:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
 .log-list {
   display: flex;
   flex-direction: column;
@@ -111,6 +194,10 @@ function bikeName(bikeId: string): string {
 }
 
 @media (max-width: 640px) {
+  .utility-list {
+    grid-template-columns: 1fr;
+  }
+
   .log-row {
     gap: 0.35rem 0.7rem;
   }

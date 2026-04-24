@@ -110,7 +110,8 @@
     "title": "Settings",
     "subtitle": "Manage reminders, notifications, and service history without leaving your dashboard.",
     "open": "Open settings",
-    "close": "Close settings"
+    "close": "Close settings",
+    "dataTitle": "Data and account"
   },
   "bike": {
     "unnamed": "Unnamed bike",

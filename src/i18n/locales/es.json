@@ -110,7 +110,8 @@
     "title": "Ajustes",
     "subtitle": "Gestiona recordatorios, notificaciones e historial sin salir del panel.",
     "open": "Abrir ajustes",
-    "close": "Cerrar ajustes"
+    "close": "Cerrar ajustes",
+    "dataTitle": "Datos y cuenta"
   },
   "bike": {
     "unnamed": "Bici sin nombre",

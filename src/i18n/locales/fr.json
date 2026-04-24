@@ -110,7 +110,8 @@
     "title": "Réglages",
     "subtitle": "Gère les rappels, les notifications et l'historique sans quitter ton tableau de bord.",
     "open": "Ouvrir les réglages",
-    "close": "Fermer les réglages"
+    "close": "Fermer les réglages",
+    "dataTitle": "Données et compte"
   },
   "bike": {
     "unnamed": "Vélo sans nom",

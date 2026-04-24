@@ -123,6 +123,8 @@
       "noCustomComponents": "Aucun composant personnalisé sur ce vélo.",
       "placeMarker": "Placer",
       "repositioning": "En placement",
+      "markerPlaced": "Sur le vélo",
+      "markerMissing": "À placer",
       "placementActive": "Clique sur le vélo pour placer {component}."
     }
   },

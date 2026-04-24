@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MapPin, Settings } from 'lucide-vue-next'
+import { Check, MapPin, RotateCcw, Settings } from 'lucide-vue-next'
 import type { BikeVisualType, HotspotPosition, IntervalsBike } from '@/types'
 import { useTracker } from '@/composables/useTracker'
 import { todayISO } from '@/utils/date'
@@ -166,6 +166,10 @@ function resetBikeName() {
   setBikeDisplayName(props.bike.id, '')
 }
 
+function hasCustomHotspot(componentId: string) {
+  return Boolean(hotspotPositions.value[componentId])
+}
+
 function handleRequestPlacement(componentId: string) {
   placementComponentId.value = componentId
 }
@@ -232,15 +236,39 @@ function handleFinishPlacement() {
       <div class="settings-row custom-row">
         <span class="settings-label">{{ t('bike.settings.customComponents') }}</span>
         <div v-if="customComponents.length" class="custom-components">
-          <div v-for="component in customComponents" :key="component.id" class="custom-component">
-            <span class="custom-name">{{ component.name }}</span>
-            <button type="button" class="settings-action icon-action" @click="handleRequestPlacement(component.id)">
-              <MapPin :size="15" stroke-width="2.2" />
-              {{ placementComponentId === component.id ? t('bike.settings.repositioning') : t('bike.settings.placeMarker') }}
-            </button>
-            <button type="button" class="settings-action" @click="handleClearHotspot(component.id)">
-              {{ t('bikeVisual.resetPosition') }}
-            </button>
+          <div
+            v-for="component in customComponents"
+            :key="component.id"
+            :class="['custom-component', { active: placementComponentId === component.id }]"
+          >
+            <div class="custom-meta">
+              <span class="custom-name">{{ component.name }}</span>
+              <span :class="['custom-status', { placed: hasCustomHotspot(component.id) }]">
+                <Check v-if="hasCustomHotspot(component.id)" :size="12" stroke-width="2.6" />
+                {{ hasCustomHotspot(component.id) ? t('bike.settings.markerPlaced') : t('bike.settings.markerMissing') }}
+              </span>
+            </div>
+            <div class="custom-actions">
+              <button
+                type="button"
+                :class="['custom-icon-button', 'primary', { active: placementComponentId === component.id }]"
+                :title="placementComponentId === component.id ? t('bike.settings.repositioning') : t('bike.settings.placeMarker')"
+                :aria-label="placementComponentId === component.id ? t('bike.settings.repositioning') : t('bike.settings.placeMarker')"
+                @click="handleRequestPlacement(component.id)"
+              >
+                <MapPin :size="16" stroke-width="2.25" />
+              </button>
+              <button
+                v-if="hasCustomHotspot(component.id)"
+                type="button"
+                class="custom-icon-button"
+                :title="t('bikeVisual.resetPosition')"
+                :aria-label="t('bikeVisual.resetPosition')"
+                @click="handleClearHotspot(component.id)"
+              >
+                <RotateCcw :size="15" stroke-width="2.25" />
+              </button>
+            </div>
           </div>
         </div>
         <p v-else class="settings-empty">{{ t('bike.settings.noCustomComponents') }}</p>
@@ -460,20 +488,85 @@ function handleFinishPlacement() {
 
 .custom-components {
   flex-direction: column;
+  gap: 0.35rem;
 }
 
 .custom-component {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.65rem;
   align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0.42rem 0.5rem 0.42rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface) 82%, var(--bg));
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.custom-component.active {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
+  background: var(--accent-light);
+}
+
+.custom-meta {
+  display: grid;
+  gap: 0.12rem;
   min-width: 0;
 }
 
 .custom-name {
-  min-width: 8rem;
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.custom-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.custom-status.placed {
+  color: var(--ok, #16a34a);
+}
+
+.custom-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-shrink: 0;
+}
+
+.custom-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.custom-icon-button:hover,
+.custom-icon-button.active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.custom-icon-button.primary {
+  color: var(--accent);
 }
 
 .settings-empty {
@@ -512,9 +605,12 @@ function handleFinishPlacement() {
   }
 
   .visual-tabs,
-  .settings-action,
-  .custom-name {
+  .settings-action {
     width: 100%;
+  }
+
+  .custom-component {
+    padding: 0.5rem;
   }
 }
 </style>

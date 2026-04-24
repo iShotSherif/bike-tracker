@@ -123,6 +123,8 @@
       "noCustomComponents": "No hay componentes personalizados en esta bici.",
       "placeMarker": "Colocar",
       "repositioning": "Colocando",
+      "markerPlaced": "En la bici",
+      "markerMissing": "Por colocar",
       "placementActive": "Haz clic en la bici para colocar {component}."
     }
   },

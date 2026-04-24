@@ -123,6 +123,8 @@
       "noCustomComponents": "No custom component on this bike.",
       "placeMarker": "Place",
       "repositioning": "Placing",
+      "markerPlaced": "On bike",
+      "markerMissing": "To place",
       "placementActive": "Click the bike to place {component}."
     }
   },

@@ -42,57 +42,76 @@ interface ProfilePayload {
   notificationSettings: NotificationSettings
 }
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Content-Type': 'application/json',
+const ALLOWED_ORIGINS = [
+  'https://bike-tracker-tau.vercel.app',
+]
+
+function corsHeaders(request: Request): Record<string, string> {
+  const origin = request.headers.get('Origin') ?? ''
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin',
+    'Content-Type': 'application/json',
+    'X-Content-Type-Options': 'nosniff',
+  }
 }
 
-const CORS_PREFLIGHT = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+function corsPreflight(request: Request): Record<string, string> {
+  const origin = request.headers.get('Origin') ?? ''
+  const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+    'Vary': 'Origin',
+  }
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: CORS_PREFLIGHT })
+      return new Response(null, { status: 204, headers: corsPreflight(request) })
     }
 
+    const cors = corsHeaders(request)
     const { pathname } = new URL(request.url)
 
     if (request.method === 'POST' && pathname === '/sync') {
-      return handleSync(request, env)
+      return handleSync(request, env, cors)
     }
 
     if (request.method === 'POST' && pathname === '/test-notify') {
-      return handleTestNotify(request, env)
+      return handleTestNotify(request, env, cors)
     }
 
     if (request.method === 'POST' && pathname === '/profile') {
-      return handleProfileSave(request, env)
+      return handleProfileSave(request, env, cors)
     }
 
     if (request.method === 'GET' && pathname.startsWith('/profile/')) {
       const userId = pathname.slice('/profile/'.length)
-      return handleProfileGet(userId, env)
+      return handleProfileGet(userId, request, env, cors)
     }
 
     if (request.method === 'POST' && pathname === '/auth/request') {
-      return handleAuthRequest(request, env)
+      return handleAuthRequest(request, env, cors)
     }
 
     if (request.method === 'POST' && pathname === '/auth/verify') {
-      return handleAuthVerify(request, env)
+      return handleAuthVerify(request, env, cors)
     }
 
     if (request.method === 'POST' && pathname === '/handoff') {
-      return handleHandoffCreate(request, env)
+      return handleHandoffCreate(request, env, cors)
     }
 
     if (request.method === 'GET' && pathname.startsWith('/handoff/')) {
       const token = pathname.slice('/handoff/'.length)
-      return handleHandoffRedeem(token, env)
+      return handleHandoffRedeem(token, env, cors)
     }
 
     if (request.method === 'GET' && pathname === '/strava/auth') {
@@ -104,10 +123,10 @@ export default {
     }
 
     if (request.method === 'GET' && pathname === '/strava/activities') {
-      return handleStravaActivities(request, env)
+      return handleStravaActivities(request, env, cors)
     }
 
-    return new Response(JSON.stringify({ error: 'Introuvable' }), { status: 404, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Introuvable' }), { status: 404, headers: cors })
   },
 
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
@@ -115,53 +134,57 @@ export default {
   },
 }
 
-async function handleSync(request: Request, env: Env): Promise<Response> {
+async function handleSync(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
+  const authedUserId = await getUserIdFromRequest(request, env)
+  if (!authedUserId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
+  }
+
   let body: SyncPayload
   try {
     body = await request.json() as SyncPayload
   } catch {
-    return new Response(JSON.stringify({ error: 'JSON invalide' }), { status: 400, headers: CORS })
-  }
-
-  if (!body.userId || typeof body.userId !== 'string') {
-    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'JSON invalide' }), { status: 400, headers: cors })
   }
 
   const { email, pushSubscription } = body.notificationSettings ?? {}
   if (!email && !pushSubscription) {
-    return new Response(JSON.stringify({ error: 'Aucun canal de notification configuré' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Aucun canal de notification configuré' }), { status: 400, headers: cors })
   }
 
-  await env.ALERT_STORE.put(body.userId, JSON.stringify(body), { expirationTtl: 172800 })
+  // Always use the JWT-authenticated userId, never trust body.userId
+  const payload: SyncPayload = { ...body, userId: authedUserId }
+  await env.ALERT_STORE.put(authedUserId, JSON.stringify(payload), { expirationTtl: 172800 })
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors })
 }
 
-async function handleProfileSave(request: Request, env: Env): Promise<Response> {
-  // Accept JWT auth (magic link) or fall back to userId in body (legacy API key flow)
+async function handleProfileSave(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   const authedUserId = await getUserIdFromRequest(request, env)
+  if (!authedUserId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
+  }
+
   let body: ProfilePayload
   try {
     body = await request.json() as ProfilePayload
   } catch {
-    return new Response(JSON.stringify({ error: 'JSON invalide' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'JSON invalide' }), { status: 400, headers: cors })
   }
-  const userId = authedUserId ?? body.userId
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: CORS })
-  }
-  await env.ALERT_STORE.put(`profile:${userId}`, JSON.stringify({ ...body, userId }))
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+
+  // Always use the JWT-authenticated userId, never trust body.userId
+  await env.ALERT_STORE.put(`profile:${authedUserId}`, JSON.stringify({ ...body, userId: authedUserId }))
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors })
 }
 
 // --- Handoff (QR code device transfer) ---
 
-async function handleHandoffCreate(request: Request, env: Env): Promise<Response> {
+async function handleHandoffCreate(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   const authedUserId = await getUserIdFromRequest(request, env)
-  const body = await request.json() as { userId?: string; sessionToken?: string }
+  const body = await request.json() as { userId?: string }
   const userId = authedUserId ?? body.userId
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
   }
 
   // Pull current profile snapshot
@@ -173,43 +196,46 @@ async function handleHandoffCreate(request: Request, env: Env): Promise<Response
   const appUrl = env.APP_URL ?? 'http://localhost:5173'
   const handoffUrl = `${appUrl}?handoff=${token}`
 
-  // Store: sessionToken (if JWT auth) + profile snapshot, 5min TTL
-  const sessionToken = extractBearer(request) ?? body.sessionToken ?? ''
+  // Store only userId + profile snapshot — never the session JWT
   await env.ALERT_STORE.put(
     `handoff:${token}`,
-    JSON.stringify({ userId, sessionToken, profileSnapshot: profileRaw ? JSON.parse(profileRaw) : null }),
+    JSON.stringify({ userId, profileSnapshot: profileRaw ? JSON.parse(profileRaw) : null }),
     { expirationTtl: 300 }
   )
 
-  return new Response(JSON.stringify({ handoffUrl }), { status: 200, headers: CORS })
+  return new Response(JSON.stringify({ handoffUrl }), { status: 200, headers: cors })
 }
 
-async function handleHandoffRedeem(token: string, env: Env): Promise<Response> {
+async function handleHandoffRedeem(token: string, env: Env, cors: Record<string, string>): Promise<Response> {
   if (!token) {
-    return new Response(JSON.stringify({ error: 'Token manquant' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Token manquant' }), { status: 400, headers: cors })
   }
 
   const raw = await env.ALERT_STORE.get(`handoff:${token}`)
   if (!raw) {
-    return new Response(JSON.stringify({ error: 'Jeton invalide ou expiré' }), { status: 404, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Jeton invalide ou expiré' }), { status: 404, headers: cors })
   }
 
-  // One-time use â€” delete immediately
+  // One-time use — delete immediately
   await env.ALERT_STORE.delete(`handoff:${token}`)
 
-  const data = JSON.parse(raw) as { userId: string; sessionToken: string; profileSnapshot: unknown }
-  return new Response(JSON.stringify(data), { status: 200, headers: CORS })
+  const data = JSON.parse(raw) as { userId: string; profileSnapshot: unknown }
+  return new Response(JSON.stringify(data), { status: 200, headers: cors })
 }
 
-async function handleProfileGet(userId: string, env: Env): Promise<Response> {
+async function handleProfileGet(userId: string, request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: cors })
+  }
+  const authedUserId = await getUserIdFromRequest(request, env)
+  if (!authedUserId || authedUserId !== userId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
   }
   const raw = await env.ALERT_STORE.get(`profile:${userId}`)
   if (!raw) {
-    return new Response(JSON.stringify({ error: 'Introuvable' }), { status: 404, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Introuvable' }), { status: 404, headers: cors })
   }
-  return new Response(raw, { status: 200, headers: CORS })
+  return new Response(raw, { status: 200, headers: cors })
 }
 
 // --- JWT helpers (HS256 via HMAC-SHA256) ---
@@ -268,10 +294,10 @@ async function getUserIdFromRequest(request: Request, env: Env): Promise<string 
 
 // --- Auth endpoints ---
 
-async function handleAuthRequest(request: Request, env: Env): Promise<Response> {
+async function handleAuthRequest(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   const { email } = await request.json() as { email?: string }
   if (!email || !email.includes('@')) {
-    return new Response(JSON.stringify({ error: 'Email invalide' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Email invalide' }), { status: 400, headers: cors })
   }
 
   const otp = String(Math.floor(100000 + Math.random() * 900000))
@@ -297,19 +323,19 @@ async function handleAuthRequest(request: Request, env: Env): Promise<Response> 
     </div>`
   )
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors })
 }
 
-async function handleAuthVerify(request: Request, env: Env): Promise<Response> {
+async function handleAuthVerify(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   const { email, otp } = await request.json() as { email?: string; otp?: string }
   if (!email || !otp) {
-    return new Response(JSON.stringify({ error: 'Champs manquants' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Champs manquants' }), { status: 400, headers: cors })
   }
 
   const userId = await hashEmail(email)
   const stored = await env.ALERT_STORE.get(`otp:${userId}`)
   if (!stored || stored !== otp.trim()) {
-    return new Response(JSON.stringify({ error: 'Code invalide ou expiré' }), { status: 401, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Code invalide ou expiré' }), { status: 401, headers: cors })
   }
 
   await env.ALERT_STORE.delete(`otp:${userId}`)
@@ -319,7 +345,7 @@ async function handleAuthVerify(request: Request, env: Env): Promise<Response> {
     env.JWT_SECRET
   )
 
-  return new Response(JSON.stringify({ token, userId }), { status: 200, headers: CORS })
+  return new Response(JSON.stringify({ token, userId }), { status: 200, headers: cors })
 }
 
 // --- Strava OAuth ---
@@ -361,7 +387,7 @@ async function handleStravaAuth(request: Request, env: Env): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
   if (!userId) {
-    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
+    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: corsHeaders(request) })
   }
 
   const state = `${userId}:${generateState()}`
@@ -386,7 +412,7 @@ async function handleStravaCallback(request: Request, env: Env): Promise<Respons
   const state = searchParams.get('state')
   const errorParam = searchParams.get('error')
 
-  const frontendUrl = env.STRAVA_REDIRECT_URI.replace('/strava/callback', '')
+  const frontendUrl = env.APP_URL
 
   if (errorParam || !code || !state) {
     return Response.redirect(`${frontendUrl}?strava=denied`, 302)
@@ -443,16 +469,21 @@ async function refreshStravaToken(env: Env, tokens: StravaTokens): Promise<Strav
   return { ...tokens, access_token: data.access_token, refresh_token: data.refresh_token, expires_at: data.expires_at }
 }
 
-async function handleStravaActivities(request: Request, env: Env): Promise<Response> {
+async function handleStravaActivities(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
+  const authedUserId = await getUserIdFromRequest(request, env)
+  if (!authedUserId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
+  }
+
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
-  if (!userId) {
-    return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: CORS })
+  if (!userId || userId !== authedUserId) {
+    return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
   }
 
   const raw = await env.ALERT_STORE.get(stravaKey(userId))
   if (!raw) {
-    return new Response(JSON.stringify({ error: 'Compte non connecté' }), { status: 401, headers: CORS })
+    return new Response(JSON.stringify({ error: 'Compte non connecté' }), { status: 401, headers: cors })
   }
 
   let tokens = JSON.parse(raw) as StravaTokens
@@ -463,7 +494,7 @@ async function handleStravaActivities(request: Request, env: Env): Promise<Respo
       tokens = await refreshStravaToken(env, tokens)
       await env.ALERT_STORE.put(stravaKey(userId), JSON.stringify(tokens))
     } catch {
-      return new Response(JSON.stringify({ error: 'Échec du rafraîchissement du jeton' }), { status: 401, headers: CORS })
+      return new Response(JSON.stringify({ error: 'Échec du rafraîchissement du jeton' }), { status: 401, headers: cors })
     }
   }
 
@@ -509,10 +540,10 @@ async function handleStravaActivities(request: Request, env: Env): Promise<Respo
     gear: a.gear_id ? { id: a.gear_id } : undefined,
   }))
 
-  return new Response(JSON.stringify({ bikes, activities }), { status: 200, headers: CORS })
+  return new Response(JSON.stringify({ bikes, activities }), { status: 200, headers: cors })
 }
 
-async function handleTestNotify(request: Request, env: Env): Promise<Response> {
+async function handleTestNotify(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   const body = await request.json() as { email?: string; userId?: string; pushSubscription?: PushSubscription }
 
   if (body.pushSubscription) {
@@ -535,7 +566,7 @@ async function handleTestNotify(request: Request, env: Env): Promise<Response> {
     )
   }
 
-  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: CORS })
+  return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors })
 }
 
 async function handleCron(env: Env): Promise<void> {
@@ -754,15 +785,19 @@ function buildEmailSubject(items: AlertComponentPayload[]): string {
   return `🚴 Entretien vélo : ${parts.join(', ')}`
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 function buildEmailHtml(items: AlertComponentPayload[]): string {
   const overdueRows = items.filter((i) => i.status === 'overdue')
   const soonRows = items.filter((i) => i.status === 'soon')
 
   const row = (item: AlertComponentPayload, color: string) =>
     `<tr>
-      <td style="padding:8px 12px;font-weight:600;border-bottom:1px solid #f0ece6">${item.componentName}</td>
-      <td style="padding:8px 12px;color:#78716c;border-bottom:1px solid #f0ece6">${item.bikeName}</td>
-      <td style="padding:8px 12px;font-family:monospace;font-size:13px;color:${color};border-bottom:1px solid #f0ece6">${item.detail}</td>
+      <td style="padding:8px 12px;font-weight:600;border-bottom:1px solid #f0ece6">${escapeHtml(item.componentName)}</td>
+      <td style="padding:8px 12px;color:#78716c;border-bottom:1px solid #f0ece6">${escapeHtml(item.bikeName)}</td>
+      <td style="padding:8px 12px;font-family:monospace;font-size:13px;color:${color};border-bottom:1px solid #f0ece6">${escapeHtml(item.detail)}</td>
     </tr>`
 
   const section = (title: string, color: string, rows: AlertComponentPayload[]) =>

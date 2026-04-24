@@ -1,11 +1,15 @@
 import { ref, computed } from 'vue'
 import type { IntervalsAthlete, IntervalsBike, BikeComponent, TrackerState, IntervalsActivity, ServiceLogEntry, NotificationSettings, SyncPayload, HotspotPosition, BikeVisualType } from '@/types'
-import { bikeDistanceKm, kmOnBikeByDate } from '@/api/intervals'
+import { bikeDistanceKm, kmOnBikeByDate } from '@/api/km'
+import { i18n } from '@/i18n'
 import { componentStatus, alertDetail } from '@/utils/status'
 import { todayISO } from '@/utils/date'
 
 const STORAGE_KEY = 'bike-tracker-state'
 
+// LEGACY MIGRATION — à supprimer quand les anciens exports apiKey
+// ne sont plus en circulation. Utilisé uniquement dans loadState()
+// et importState() pour la rétrocompatibilité.
 function legacyUserIdFromApiKey(apiKey?: string): string | null {
   const normalized = apiKey?.trim()
   return normalized ? btoa(normalized).slice(0, 16) : null
@@ -249,18 +253,26 @@ async function syncToWorker(): Promise<void> {
   } catch { /* non-fatal */ }
 }
 
-const DEFAULT_COMPONENTS: Omit<BikeComponent, 'id'>[] = [
-  { name: 'Chaîne', intervalKm: 3000, dateStarted: todayISO(), kmAtStart: 0 },
-  { name: 'Cassette', intervalKm: 9000, dateStarted: todayISO(), kmAtStart: 0 },
-  { name: 'Plaquettes de frein', intervalKm: 1500, dateStarted: todayISO(), kmAtStart: 0 },
-  { name: 'Pneus', intervalKm: 5000, dateStarted: todayISO(), kmAtStart: 0 },
-  { name: 'Câbles de frein', intervalDays: 365, dateStarted: todayISO(), kmAtStart: 0 },
-  { name: 'Révision générale', intervalDays: 180, dateStarted: todayISO(), kmAtStart: 0 },
+type DefaultComponentKey = 'chain' | 'cassette' | 'brakePads' | 'tires' | 'brakeCables' | 'fullService'
+
+const DEFAULT_COMPONENTS: Array<Omit<BikeComponent, 'id' | 'name'> & { nameKey: DefaultComponentKey }> = [
+  { nameKey: 'chain', intervalKm: 3000, dateStarted: todayISO(), kmAtStart: 0 },
+  { nameKey: 'cassette', intervalKm: 9000, dateStarted: todayISO(), kmAtStart: 0 },
+  { nameKey: 'brakePads', intervalKm: 1500, dateStarted: todayISO(), kmAtStart: 0 },
+  { nameKey: 'tires', intervalKm: 5000, dateStarted: todayISO(), kmAtStart: 0 },
+  { nameKey: 'brakeCables', intervalDays: 365, dateStarted: todayISO(), kmAtStart: 0 },
+  { nameKey: 'fullService', intervalDays: 180, dateStarted: todayISO(), kmAtStart: 0 },
 ]
 
 function initDefaultComponents(bikeId: string): void {
+  // Intentionally idempotent: Strava refresh can call this repeatedly for the same bike.
   if (!componentsByBike.value[bikeId]?.length) {
-    DEFAULT_COMPONENTS.forEach((c) => addComponent(bikeId, c))
+    DEFAULT_COMPONENTS.forEach(({ nameKey, ...component }) => {
+      addComponent(bikeId, {
+        ...component,
+        name: i18n.global.t(`components.names.${nameKey}`),
+      })
+    })
   }
 }
 

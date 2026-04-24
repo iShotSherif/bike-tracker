@@ -331,7 +331,7 @@ async function pushProfileToCloud(): Promise<void> {
 
 async function pullProfileFromCloud(): Promise<boolean> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
-  if (!workerUrl || !userId.value) return false
+  if (!workerUrl || !userId.value || !authToken.value) return false
   try {
     const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: { 'Content-Type': 'application/json', ...(authToken.value ? { 'Authorization': `Bearer ${authToken.value}` } : {}) } })
     if (!res.ok) return false

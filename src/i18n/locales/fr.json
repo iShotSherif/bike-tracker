@@ -66,7 +66,7 @@
     "title": "Connexion",
     "subtitle": "Retrouve ton profil sur n'importe quel appareil.",
     "emailLabel": "Ton adresse e-mail",
-    "emailPlaceholder": "toi@example.com",
+    "emailPlaceholder": "toi\\@example.com",
     "sendLink": "M'envoyer un lien de connexion",
     "sending": "Envoi…",
     "codeSent": "Un code à 6 chiffres a été envoyé à {email}.",

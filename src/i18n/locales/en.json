@@ -66,7 +66,7 @@
     "title": "Sign in",
     "subtitle": "Find your profile on any device.",
     "emailLabel": "Your email address",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "you\\@example.com",
     "sendLink": "Send me a sign-in link",
     "sending": "Sending…",
     "codeSent": "A 6-digit code was sent to {email}.",

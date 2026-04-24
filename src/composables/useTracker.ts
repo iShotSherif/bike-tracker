@@ -377,7 +377,14 @@ function logout(): void {
 
 function connectStrava(): void {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
-  if (!workerUrl || !userId.value) return
+  if (!workerUrl) {
+    error.value = 'Configuration Strava manquante. Définis VITE_WORKER_URL pour activer la connexion.'
+    return
+  }
+  if (!userId.value) {
+    error.value = 'Impossible de préparer la connexion Strava. Recharge la page puis réessaie.'
+    return
+  }
   window.location.href = `${workerUrl}/strava/auth?userId=${encodeURIComponent(userId.value)}`
 }
 

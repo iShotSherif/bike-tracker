@@ -46,6 +46,7 @@ const selectedVisual = computed({
 })
 const hotspotPositions = computed(() => getHotspotPositionsForBike(props.bike.id, selectedVisual.value))
 const componentTrackerRef = ref<InstanceType<typeof ComponentTracker> | null>(null)
+const placementComponentId = ref<string | null>(null)
 
 const zoneStatus = computed<Partial<Record<BikeZone, ComponentStatus>>>(() => {
   const merged: Partial<Record<BikeZone, ComponentStatus>> = {}
@@ -130,6 +131,14 @@ function handleFocusComponent(componentId: string) {
 function handleBikeVisualChange(value: BikeVisualType) {
   selectedVisual.value = value
 }
+
+function handleRequestPlacement(componentId: string) {
+  placementComponentId.value = componentId
+}
+
+function handleFinishPlacement() {
+  placementComponentId.value = null
+}
 </script>
 
 <template>
@@ -146,9 +155,11 @@ function handleBikeVisualChange(value: BikeVisualType) {
       :components="components"
       :component-hotspots="componentHotspots"
       :bike-visual="selectedVisual"
+      :placement-component-id="placementComponentId"
       @place-hotspot="handlePlaceHotspot"
       @clear-hotspot="handleClearHotspot"
       @focus-component="handleFocusComponent"
+      @finish-placement="handleFinishPlacement"
       @update:bike-visual="handleBikeVisualChange"
     />
 
@@ -157,6 +168,7 @@ function handleBikeVisualChange(value: BikeVisualType) {
       :bike-id="bike.id"
       :bike-name="displayName"
       :total-km="totalKm"
+      @request-placement="handleRequestPlacement"
     />
   </article>
 </template>

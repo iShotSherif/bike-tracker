@@ -159,6 +159,7 @@
     },
     "actions": {
       "addComponent": "+ Añadir un componente",
+      "customComponent": "Componente personalizado",
       "history": "Historial",
       "add": "Añadir"
     },
@@ -192,21 +193,19 @@
     "test": "Probar"
   },
   "bikeVisual": {
-    "eyebrow": "Mapa de mantenimiento",
-    "headline": "Mira de un vistazo qué necesita atención antes de tu próxima salida.",
-    "caption": "Los componentes críticos aparecen directamente sobre la bici para una lectura rápida, sin rebuscar en una lista.",
+    "visualType": "Tipo de bici",
+    "placing": "Posición: {component}",
+    "finishPlacement": "Terminar",
+    "resetPosition": "Quitar marcador",
+    "placementHint": "Haz clic en la bici para colocar {component}",
+    "altRoad": "Bici de ruta en estudio",
+    "altGravel": "Bici gravel en estudio",
+    "altMtb": "MTB en estudio",
     "visuals": {
       "road": "Ruta",
       "gravel": "Gravel",
       "mtb": "MTB"
     },
-    "togglePlacement": "Colocar marcadores",
-    "finishPlacement": "Terminar colocación",
-    "resetPosition": "Restablecer posición",
-    "placementHint": "Haz clic en cualquier parte de la imagen de la bici para colocar {component}",
-    "altRoad": "Bici de ruta en estudio",
-    "altGravel": "Bici gravel en estudio",
-    "altMtb": "MTB en estudio",
     "legend": {
       "watch": "Vigilar",
       "soon": "Próximos",

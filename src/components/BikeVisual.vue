@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { BikeComponent, BikeVisualType, HotspotPosition } from '@/types'
 import type { BikeHotspot, BikeZone } from '@/utils/componentZones'
@@ -19,16 +19,19 @@ const props = defineProps<{
     hotspotKey: BikeHotspot
     position?: HotspotPosition
   }>
+  placementComponentId: string | null
 }>()
 
 const emit = defineEmits<{
   (e: 'place-hotspot', payload: { componentId: string; position: HotspotPosition }): void
   (e: 'clear-hotspot', componentId: string): void
   (e: 'focus-component', componentId: string): void
+  (e: 'finish-placement'): void
   (e: 'update:bike-visual', value: BikeVisualType): void
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
+const bikeVisualTypes: BikeVisualType[] = ['road', 'gravel', 'mtb']
 
 const defaultHotspotMeta: Record<BikeHotspot, {
   key: BikeHotspot
@@ -46,16 +49,13 @@ const defaultHotspotMeta: Record<BikeHotspot, {
   service: { key: 'service', label: 'Entretien', topPct: 32, leftPct: 52 },
 }
 
-const placingMode = ref(false)
-const selectedComponentId = ref<string>('')
-
 const selectedComponent = computed(() =>
-  props.components.find((component) => component.id === selectedComponentId.value) ?? null,
+  props.components.find((component) => component.id === props.placementComponentId) ?? null,
 )
 
 const renderedHotspots = computed(() =>
   props.componentHotspots
-    .filter((hotspot) => hotspot.status !== 'ok')
+    .filter((hotspot) => hotspot.status !== 'ok' || hotspot.componentId === props.placementComponentId)
     .map((hotspot) => {
       const fallback = defaultHotspotMeta[hotspot.hotspotKey]
       const position = hotspot.position ?? {
@@ -71,15 +71,8 @@ const renderedHotspots = computed(() =>
     }),
 )
 
-function togglePlacingMode() {
-  placingMode.value = !placingMode.value
-  if (placingMode.value && !selectedComponentId.value && props.components.length) {
-    selectedComponentId.value = props.components[0].id
-  }
-}
-
 function handleStageClick(event: MouseEvent) {
-  if (!placingMode.value || !selectedComponent.value) return
+  if (!selectedComponent.value) return
 
   const stage = event.currentTarget as HTMLDivElement | null
   if (!stage) return
@@ -98,7 +91,7 @@ function handleStageClick(event: MouseEvent) {
 }
 
 function handleHotspotClick(componentId: string) {
-  if (placingMode.value) return
+  if (selectedComponent.value) return
   emit('focus-component', componentId)
 }
 
@@ -118,59 +111,47 @@ function bikeImageAlt(visual: BikeVisualType): string {
 <template>
   <figure class="bike-visual">
     <div class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">{{ t('bikeVisual.eyebrow') }}</p>
-        <h3 class="headline">{{ t('bikeVisual.headline') }}</h3>
-        <p class="caption">{{ t('bikeVisual.caption') }}</p>
+      <div class="visual-toolbar">
+        <div class="visual-tabs" :aria-label="t('bikeVisual.visualType')">
+          <button
+            v-for="visual in bikeVisualTypes"
+            :key="visual"
+            type="button"
+            :class="['visual-tab', { active: props.bikeVisual === visual }]"
+            @click="emit('update:bike-visual', visual)"
+          >
+            {{ t(`bikeVisual.visuals.${visual}`) }}
+          </button>
+        </div>
+
+        <div v-if="selectedComponent" class="placement-tools">
+          <span class="placement-label">
+            {{ t('bikeVisual.placing', { component: getComponentLabel(selectedComponent.name, t) }) }}
+          </span>
+          <button type="button" class="placement-reset" @click="emit('clear-hotspot', selectedComponent.id)">
+            {{ t('bikeVisual.resetPosition') }}
+          </button>
+          <button type="button" class="placement-finish" @click="emit('finish-placement')">
+            {{ t('bikeVisual.finishPlacement') }}
+          </button>
+        </div>
       </div>
 
-      <div class="placement-bar">
-        <select
-          :value="props.bikeVisual"
-          class="placement-select visual-select"
-          @change="emit('update:bike-visual', ($event.target as HTMLSelectElement).value as BikeVisualType)"
-        >
-          <option value="road">{{ t('bikeVisual.visuals.road') }}</option>
-          <option value="gravel">{{ t('bikeVisual.visuals.gravel') }}</option>
-          <option value="mtb">{{ t('bikeVisual.visuals.mtb') }}</option>
-        </select>
-
-        <button type="button" class="placement-toggle" :class="{ active: placingMode }" @click="togglePlacingMode">
-          {{ placingMode ? t('bikeVisual.finishPlacement') : t('bikeVisual.togglePlacement') }}
-        </button>
-
-        <select v-model="selectedComponentId" class="placement-select">
-          <option disabled value="">{{ t('components.selectPlaceholder') }}</option>
-          <option v-for="component in props.components" :key="component.id" :value="component.id">
-            {{ getComponentLabel(component.name, t) }}
-          </option>
-        </select>
-
-        <button
-          type="button"
-          class="placement-reset"
-          :disabled="!selectedComponentId"
-          @click="selectedComponentId && emit('clear-hotspot', selectedComponentId)"
-        >
-          {{ t('bikeVisual.resetPosition') }}
-        </button>
-      </div>
-
-      <div class="image-stage" :class="{ placing: placingMode }" @click="handleStageClick">
+      <div class="image-stage" :class="{ placing: selectedComponent }" @click="handleStageClick">
         <img
           class="bike-image"
           :src="bikeImageSrc(props.bikeVisual)"
           :alt="bikeImageAlt(props.bikeVisual)"
         />
 
-        <div v-if="placingMode" class="placement-hint">
+        <div v-if="selectedComponent" class="placement-hint">
           {{ t('bikeVisual.placementHint', { component: selectedComponent ? getComponentLabel(selectedComponent.name, t) : t('components.selectedPlaceholder') }) }}
         </div>
 
         <div
           v-for="hotspot in renderedHotspots"
           :key="hotspot.componentId"
-          class="hotspot"
+          :class="['hotspot', { selected: hotspot.componentId === props.placementComponentId }]"
           :data-status="hotspot.status"
           :style="{ top: `${hotspot.position.topPct}%`, left: `${hotspot.position.leftPct}%` }"
           @click.stop="handleHotspotClick(hotspot.componentId)"
@@ -193,14 +174,14 @@ function bikeImageAlt(visual: BikeVisualType): string {
 .bike-visual {
   margin: 0 0 1rem;
   padding: 1.1rem 1rem 0.8rem;
-  border-radius: 18px;
+  border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--border) 70%, white);
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.98), rgba(247, 245, 242, 0.82) 55%, rgba(253, 240, 235, 0.8)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.94));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.96)),
+    var(--bg);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    0 18px 45px rgba(28, 25, 23, 0.06);
+    0 12px 30px rgba(28, 25, 23, 0.05);
 }
 
 .hero {
@@ -209,80 +190,82 @@ function bikeImageAlt(visual: BikeVisualType): string {
   gap: 0.9rem;
 }
 
-.hero-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.eyebrow {
-  margin: 0;
-  font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.headline {
-  margin: 0;
-  max-width: 28rem;
-  font-size: 1rem;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-}
-
-.caption {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-  max-width: 34rem;
-}
-
-.placement-bar {
+.visual-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
   align-items: center;
+  justify-content: space-between;
 }
 
-.placement-toggle,
-.placement-reset,
-.placement-select {
-  border-radius: 999px;
+.visual-tabs {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(4rem, 1fr));
+  width: min(100%, 17rem);
+  padding: 0.18rem;
+  border-radius: 8px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--surface);
+}
+
+.visual-tab {
+  min-height: 2rem;
+  padding: 0.3rem 0.55rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.visual-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.placement-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.placement-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.placement-reset,
+.placement-finish {
+  min-height: 2rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text);
   font: inherit;
-}
-
-.placement-toggle,
-.placement-reset {
-  padding: 0.42rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.placement-toggle.active {
+.placement-finish {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
 }
 
-.placement-reset:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.placement-select {
-  min-width: 12rem;
-  padding: 0.42rem 0.8rem;
-}
-
 .image-stage {
   position: relative;
   min-height: 16rem;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   background: #f7f4ef;
   cursor: default;
@@ -308,7 +291,7 @@ function bikeImageAlt(visual: BikeVisualType): string {
   right: 0.75rem;
   z-index: 3;
   padding: 0.45rem 0.7rem;
-  border-radius: 12px;
+  border-radius: 8px;
   background: rgba(28, 25, 23, 0.76);
   color: #fff;
   font-size: 0.74rem;
@@ -354,6 +337,17 @@ function bikeImageAlt(visual: BikeVisualType): string {
 
 .hotspot[data-status='ok'] {
   opacity: 0;
+}
+
+.hotspot.selected {
+  opacity: 1;
+}
+
+.hotspot.selected .pulse {
+  background: var(--accent-light);
+  box-shadow:
+    0 0 0 10px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 0 34px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 .hotspot[data-status='watch'] .pulse {
@@ -445,22 +439,19 @@ function bikeImageAlt(visual: BikeVisualType): string {
     min-height: 11.5rem;
   }
 
-  .headline {
-    font-size: 0.92rem;
-  }
-
-  .caption {
-    font-size: 0.78rem;
-  }
-
-  .placement-bar {
+  .visual-toolbar {
     align-items: stretch;
   }
 
-  .placement-toggle,
+  .visual-tabs,
+  .placement-tools,
   .placement-reset,
-  .placement-select {
+  .placement-finish {
     width: 100%;
+  }
+
+  .placement-tools {
+    justify-content: flex-start;
   }
 
   .pulse {

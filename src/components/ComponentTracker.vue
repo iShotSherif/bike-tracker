@@ -8,6 +8,9 @@ import { componentStatus, daysUntilAlert, kmSinceStart, progressPct } from '@/ut
 import { COMPONENT_PRESETS, findComponentPreset, getComponentLabel } from '@/utils/componentPresets'
 
 const props = defineProps<{ bikeId: string; bikeName: string; totalKm: number }>()
+const emit = defineEmits<{
+  (e: 'request-placement', componentId: string): void
+}>()
 
 const { t, locale } = useI18n({ useScope: 'global' })
 const {
@@ -28,6 +31,8 @@ const newIntervalKm = ref(1000)
 const newIntervalDays = ref(365)
 const newDateStarted = ref('')
 const newKmAtStart = ref<number | ''>('')
+const CUSTOM_PRESET_VALUE = '__custom__'
+const isCustomNewComponent = computed(() => newPresetName.value === CUSTOM_PRESET_VALUE)
 
 watch(newDateStarted, (date) => {
   if (date) newKmAtStart.value = Math.floor(kmAtDate(props.bikeId, date))
@@ -56,6 +61,14 @@ function openForm() {
 }
 
 function applyPresetToNewForm(presetName: string) {
+  if (presetName === CUSTOM_PRESET_VALUE) {
+    newName.value = ''
+    newMode.value = 'km'
+    newIntervalKm.value = 1000
+    newIntervalDays.value = 365
+    return
+  }
+
   const preset = findComponentPreset(presetName)
 
   if (!preset) {
@@ -83,7 +96,7 @@ function saveNew() {
 
   if (!name || (!hasKm && !hasDays) || !newDateStarted.value || newKmAtStart.value === '') return
 
-  addComponent(props.bikeId, {
+  const component = addComponent(props.bikeId, {
     name,
     intervalKm: hasKm ? newIntervalKm.value : undefined,
     intervalDays: hasDays ? newIntervalDays.value : undefined,
@@ -92,6 +105,9 @@ function saveNew() {
   })
 
   showForm.value = false
+  if (isCustomNewComponent.value) {
+    emit('request-placement', component.id)
+  }
 }
 
 const editingId = ref<string | null>(null)
@@ -375,9 +391,16 @@ defineExpose({
         <option v-for="preset in COMPONENT_PRESETS" :key="preset.name" :value="preset.name">
           {{ componentLabel(preset.name) }}
         </option>
+        <option :value="CUSTOM_PRESET_VALUE">{{ t('tracker.actions.customComponent') }}</option>
       </select>
 
-      <input :value="componentLabel(newName)" readonly class="input input-disabled" />
+      <input
+        v-if="isCustomNewComponent"
+        v-model.trim="newName"
+        :placeholder="t('tracker.componentNamePlaceholder')"
+        class="input"
+      />
+      <input v-else :value="componentLabel(newName)" readonly class="input input-disabled" />
 
       <div class="mode-toggle">
         <button :class="['btn-mode', { active: newMode === 'km' }]" @click="newMode = 'km'">{{ t('tracker.mode.km') }}</button>

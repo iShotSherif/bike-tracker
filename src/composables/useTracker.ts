@@ -140,13 +140,14 @@ function setComponentsForBike(bikeId: string, components: BikeComponent[]): void
   persist()
 }
 
-function addComponent(bikeId: string, component: Omit<BikeComponent, 'id'>): void {
+function addComponent(bikeId: string, component: Omit<BikeComponent, 'id'>): BikeComponent {
   const list = getComponentsForBike(bikeId)
   const newOne: BikeComponent = {
     ...component,
     id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   }
   setComponentsForBike(bikeId, [...list, newOne])
+  return newOne
 }
 
 function getHotspotPositionsForBike(bikeId: string, visual: BikeVisualType): Record<string, HotspotPosition> {

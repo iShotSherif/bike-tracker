@@ -1,10 +1,23 @@
 import { ref, computed } from 'vue'
 import type { IntervalsAthlete, IntervalsBike, BikeComponent, TrackerState, IntervalsActivity, ServiceLogEntry, NotificationSettings, SyncPayload, HotspotPosition, BikeVisualType } from '@/types'
-import { fetchAthlete, bikeDistanceKm, fetchActivities, kmOnBikeByDate } from '@/api/intervals'
+import { bikeDistanceKm, kmOnBikeByDate } from '@/api/intervals'
 import { componentStatus, alertDetail } from '@/utils/status'
 import { todayISO } from '@/utils/date'
 
 const STORAGE_KEY = 'bike-tracker-state'
+
+function legacyUserIdFromApiKey(apiKey?: string): string | null {
+  const normalized = apiKey?.trim()
+  return normalized ? btoa(normalized).slice(0, 16) : null
+}
+
+function createUserId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+
+  return `u-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
 
 function loadState(): Partial<TrackerState> {
   try {
@@ -63,9 +76,15 @@ function saveState(state: Partial<TrackerState>): void {
   }
 }
 
-const apiKey = ref<string>(loadState().apiKey ?? '')
-const authToken = ref<string>(loadState().authToken ?? '')
-const stravaConnected = ref<boolean>(loadState().stravaConnected ?? false)
+const initialState = loadState()
+
+const userId = ref<string>(
+  initialState.userId
+    ?? legacyUserIdFromApiKey(initialState.apiKey)
+    ?? createUserId(),
+)
+const authToken = ref<string>(initialState.authToken ?? '')
+const stravaConnected = ref<boolean>(initialState.stravaConnected ?? false)
 const athlete = ref<IntervalsAthlete | null>(null)
 const activities = ref<IntervalsActivity[]>([])
 const loading = ref(false)
@@ -74,25 +93,21 @@ const error = ref<string | null>(null)
 const bikes = computed<IntervalsBike[]>(() => athlete.value?.bikes ?? [])
 
 const componentsByBike = ref<Record<string, BikeComponent[]>>(
-  loadState().componentsByBike ?? {}
+  initialState.componentsByBike ?? {}
 )
 const hotspotPositionsByBike = ref<Record<string, Partial<Record<BikeVisualType, Record<string, HotspotPosition>>>>>(
-  loadState().hotspotPositionsByBike ?? {}
+  initialState.hotspotPositionsByBike ?? {}
 )
 const bikeVisualByBike = ref<Record<string, BikeVisualType>>(
-  loadState().bikeVisualByBike ?? {}
+  initialState.bikeVisualByBike ?? {}
 )
 
-const serviceLog = ref<ServiceLogEntry[]>(loadState().serviceLog ?? [])
-const notificationSettings = ref<NotificationSettings>(loadState().notificationSettings ?? {})
-
-const userId = computed<string>(() =>
-  apiKey.value ? btoa(apiKey.value).slice(0, 16) : ''
-)
+const serviceLog = ref<ServiceLogEntry[]>(initialState.serviceLog ?? [])
+const notificationSettings = ref<NotificationSettings>(initialState.notificationSettings ?? {})
 
 function persist(): void {
   saveState({
-    apiKey: apiKey.value,
+    userId: userId.value,
     authToken: authToken.value || undefined,
     stravaConnected: stravaConnected.value,
     componentsByBike: componentsByBike.value,
@@ -101,6 +116,10 @@ function persist(): void {
     serviceLog: serviceLog.value,
     notificationSettings: notificationSettings.value,
   })
+}
+
+if (!initialState.userId) {
+  persist()
 }
 
 function setNotificationSettings(s: NotificationSettings): void {
@@ -247,7 +266,8 @@ function initDefaultComponents(bikeId: string): void {
 
 function exportState(): string {
   return JSON.stringify({
-    apiKey: apiKey.value,
+    userId: userId.value,
+    stravaConnected: stravaConnected.value,
     componentsByBike: componentsByBike.value,
     hotspotPositionsByBike: hotspotPositionsByBike.value,
     bikeVisualByBike: bikeVisualByBike.value,
@@ -259,22 +279,22 @@ function exportState(): string {
 function importState(json: string): void {
   try {
     const parsed = JSON.parse(json)
-    if (parsed.apiKey) apiKey.value = parsed.apiKey
+    if (typeof parsed.userId === 'string' && parsed.userId.trim()) {
+      userId.value = parsed.userId
+    } else if (typeof parsed.apiKey === 'string') {
+      userId.value = legacyUserIdFromApiKey(parsed.apiKey) ?? userId.value
+    }
+    if (typeof parsed.stravaConnected === 'boolean') stravaConnected.value = parsed.stravaConnected
     if (parsed.componentsByBike) componentsByBike.value = parsed.componentsByBike
     if (parsed.hotspotPositionsByBike) hotspotPositionsByBike.value = parsed.hotspotPositionsByBike
     if (parsed.bikeVisualByBike) bikeVisualByBike.value = parsed.bikeVisualByBike
     if (parsed.serviceLog) serviceLog.value = parsed.serviceLog
     if (parsed.notificationSettings) notificationSettings.value = parsed.notificationSettings
+    error.value = null
     persist()
   } catch {
     error.value = 'Fichier invalide.'
   }
-}
-
-function authHeaders(): Record<string, string> {
-  const h: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (authToken.value) h.Authorization = `Bearer ${authToken.value}`
-  return h
 }
 
 async function pushProfileToCloud(): Promise<void> {
@@ -283,9 +303,10 @@ async function pushProfileToCloud(): Promise<void> {
   try {
     await fetch(`${workerUrl}/profile`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userId: userId.value,
+        stravaConnected: stravaConnected.value,
         componentsByBike: componentsByBike.value,
         hotspotPositionsByBike: hotspotPositionsByBike.value,
         bikeVisualByBike: bikeVisualByBike.value,
@@ -300,9 +321,11 @@ async function pullProfileFromCloud(): Promise<boolean> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
   if (!workerUrl || !userId.value) return false
   try {
-    const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: authHeaders() })
+    const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: { 'Content-Type': 'application/json' } })
     if (!res.ok) return false
     const data = await res.json() as Partial<TrackerState>
+    if (typeof data.userId === 'string' && data.userId.trim()) userId.value = data.userId
+    if (typeof data.stravaConnected === 'boolean') stravaConnected.value = data.stravaConnected
     if (data.componentsByBike) componentsByBike.value = data.componentsByBike
     if (data.hotspotPositionsByBike) hotspotPositionsByBike.value = data.hotspotPositionsByBike
     if (data.bikeVisualByBike) bikeVisualByBike.value = data.bikeVisualByBike
@@ -396,36 +419,6 @@ function resetAthlete(): void {
   activities.value = []
 }
 
-function setApiKey(key: string): void {
-  apiKey.value = key
-  persist()
-}
-
-async function loadAthlete(): Promise<void> {
-  if (!apiKey.value.trim()) {
-    error.value = 'Entre ta clé API Intervals.icu'
-    return
-  }
-  loading.value = true
-  error.value = null
-  try {
-    athlete.value = await fetchAthlete(apiKey.value)
-    const newest = new Date().toISOString().split('T')[0]
-    const oldest = new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    activities.value = await fetchActivities(apiKey.value, { oldest, newest, limit: 1000 })
-    const restored = await pullProfileFromCloud()
-    if (!restored) {
-      bikes.value.forEach((bike) => initDefaultComponents(bike.id))
-    }
-    await syncToWorker()
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Impossible de charger les données'
-    athlete.value = null
-  } finally {
-    loading.value = false
-  }
-}
-
 function bikeTotalKm(bike: IntervalsBike): number {
   return bikeDistanceKm(bike)
 }
@@ -456,7 +449,6 @@ const alertComponents = computed(() =>
 
 export function useTracker() {
   return {
-    apiKey,
     athlete,
     loading,
     error,
@@ -479,8 +471,6 @@ export function useTracker() {
     addServiceEntry,
     getLogForComponent,
     markComponentDone,
-    setApiKey,
-    loadAthlete,
     bikeTotalKm,
     kmAtDate,
     notificationSettings,

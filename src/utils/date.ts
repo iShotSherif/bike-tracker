@@ -1,16 +1,31 @@
+const DATE_ORDER: Record<string, Array<'day' | 'month' | 'year'>> = {
+  fr: ['day', 'month', 'year'],
+  en: ['month', 'day', 'year'],
+  es: ['day', 'month', 'year'],
+}
+
+function parseISODate(isoDate: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate)
+  if (!match) return new Date(isoDate)
+
+  const [, year, month, day] = match
+  return new Date(Number(year), Number(month) - 1, Number(day))
+}
+
 export function formatSince(isoDate: string, locale = 'en'): string {
-  const then = new Date(isoDate)
-  const now = new Date()
-  const diffDays = Math.floor((then.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+  const date = parseISODate(isoDate)
 
-  if (Math.abs(diffDays) < 30) return formatter.format(diffDays, 'day')
+  if (Number.isNaN(date.getTime())) return isoDate
 
-  const diffMonths = Math.round(diffDays / 30)
-  if (Math.abs(diffMonths) < 12) return formatter.format(diffMonths, 'month')
+  const normalizedLocale = locale.toLowerCase().split(/[-_]/)[0]
+  const order = DATE_ORDER[normalizedLocale] ?? DATE_ORDER.en
+  const parts = {
+    day: String(date.getDate()).padStart(2, '0'),
+    month: String(date.getMonth() + 1).padStart(2, '0'),
+    year: String(date.getFullYear()),
+  }
 
-  const diffYears = Math.round(diffDays / 365)
-  return formatter.format(diffYears, 'year')
+  return order.map((part) => parts[part]).join('-')
 }
 
 export function todayISO(): string {

@@ -29,7 +29,7 @@
       "strava": {
         "label": "Strava",
         "connect": "Conectar Strava",
-        "hint": "Conexión por OAuth — no se guarda ninguna contraseña."
+      "hint": "Conecta Strava para importar bicis y salidas. Conexión por OAuth — no se guarda ninguna contraseña."
       },
       "auth": {
         "connected": "Conectado",
@@ -216,7 +216,7 @@
   "handoff": {
     "title": "Abrir en mi teléfono",
     "close": "Cerrar",
-    "fallbackWarning": "Este enlace contiene tu clave API — no la compartas con nadie más.",
+    "fallbackWarning": "Este enlace contiene una copia de tu perfil local — no la compartas con nadie más.",
     "scanHint": "Escanea este código con tu teléfono. Válido durante 5 minutos.",
     "generateError": "No se pudo generar el código QR.",
     "expired": "Código caducado.",

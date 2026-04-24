@@ -29,7 +29,7 @@
       "strava": {
         "label": "Strava",
         "connect": "Connect Strava",
-        "hint": "OAuth connection - no password stored."
+      "hint": "Connect Strava to import bikes and rides. OAuth connection - no password stored."
       },
       "auth": {
         "connected": "Connected",
@@ -216,7 +216,7 @@
   "handoff": {
     "title": "Open on my phone",
     "close": "Close",
-    "fallbackWarning": "This link contains your API key - do not share it with anyone else.",
+    "fallbackWarning": "This link contains a snapshot of your local profile - do not share it with anyone else.",
     "scanHint": "Scan this code with your phone. Valid for 5 minutes.",
     "generateError": "Couldn't generate the QR code.",
     "expired": "Code expired.",

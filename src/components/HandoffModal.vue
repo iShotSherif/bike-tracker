@@ -7,7 +7,7 @@ import { useTracker } from '@/composables/useTracker'
 const emit = defineEmits<{ close: [] }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const { authToken, userId } = useTracker()
+const { authToken, exportState, userId } = useTracker()
 
 const WORKER_URL = import.meta.env.VITE_WORKER_URL as string | undefined
 
@@ -28,25 +28,28 @@ const minutesDisplay = computed(() => {
 const expired = computed(() => secondsLeft.value <= 0)
 const isFallback = computed(() => !WORKER_URL)
 
+function encodeTransferState(value: string): string {
+  const bytes = new TextEncoder().encode(value)
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join('')
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
 onMounted(async () => {
   if (!WORKER_URL) {
-    const key = useTracker().apiKey.value
-    if (key) {
-      const fallbackUrl = `${window.location.origin}${window.location.pathname}?key=${encodeURIComponent(key)}`
-      handoffUrl.value = fallbackUrl
-      await renderQr(fallbackUrl)
-    }
+    const fallbackUrl = `${window.location.origin}${window.location.pathname}?import=${encodeURIComponent(encodeTransferState(exportState()))}`
+    handoffUrl.value = fallbackUrl
+    await renderQr(fallbackUrl)
     return
   }
 
   try {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (authToken.value) headers.Authorization = `Bearer ${authToken.value}`
-
     const response = await fetch(`${WORKER_URL}/handoff`, {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ userId: userId.value }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userId.value,
+        sessionToken: authToken.value || undefined,
+      }),
     })
 
     if (!response.ok) throw new Error('Request failed')

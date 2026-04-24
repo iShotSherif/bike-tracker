@@ -114,7 +114,17 @@
   },
   "bike": {
     "unnamed": "Bici sin nombre",
-    "totalKm": "{count} km totales"
+    "totalKm": "{count} km totales",
+    "settings": {
+      "open": "Abrir ajustes de la bici",
+      "name": "Nombre",
+      "resetName": "Restablecer",
+      "customComponents": "Marcadores propios",
+      "noCustomComponents": "No hay componentes personalizados en esta bici.",
+      "placeMarker": "Colocar",
+      "repositioning": "Colocando",
+      "placementActive": "Haz clic en la bici para colocar {component}."
+    }
   },
   "dashboard": {
     "title": "Vigilar",

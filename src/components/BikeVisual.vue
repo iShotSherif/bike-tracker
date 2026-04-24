@@ -27,11 +27,9 @@ const emit = defineEmits<{
   (e: 'clear-hotspot', componentId: string): void
   (e: 'focus-component', componentId: string): void
   (e: 'finish-placement'): void
-  (e: 'update:bike-visual', value: BikeVisualType): void
 }>()
 
 const { t } = useI18n({ useScope: 'global' })
-const bikeVisualTypes: BikeVisualType[] = ['road', 'gravel', 'mtb']
 
 const defaultHotspotMeta: Record<BikeHotspot, {
   key: BikeHotspot
@@ -111,20 +109,7 @@ function bikeImageAlt(visual: BikeVisualType): string {
 <template>
   <figure class="bike-visual">
     <div class="hero">
-      <div class="visual-toolbar">
-        <div class="visual-tabs" :aria-label="t('bikeVisual.visualType')">
-          <button
-            v-for="visual in bikeVisualTypes"
-            :key="visual"
-            type="button"
-            :class="['visual-tab', { active: props.bikeVisual === visual }]"
-            @click="emit('update:bike-visual', visual)"
-          >
-            {{ t(`bikeVisual.visuals.${visual}`) }}
-          </button>
-        </div>
-
-        <div v-if="selectedComponent" class="placement-tools">
+      <div v-if="selectedComponent" class="placement-tools">
           <span class="placement-label">
             {{ t('bikeVisual.placing', { component: getComponentLabel(selectedComponent.name, t) }) }}
           </span>
@@ -134,7 +119,6 @@ function bikeImageAlt(visual: BikeVisualType): string {
           <button type="button" class="placement-finish" @click="emit('finish-placement')">
             {{ t('bikeVisual.finishPlacement') }}
           </button>
-        </div>
       </div>
 
       <div class="image-stage" :class="{ placing: selectedComponent }" @click="handleStageClick">
@@ -162,11 +146,6 @@ function bikeImageAlt(visual: BikeVisualType): string {
       </div>
     </div>
 
-    <figcaption class="legend">
-      <span class="chip watch">{{ t('bikeVisual.legend.watch') }}</span>
-      <span class="chip soon">{{ t('bikeVisual.legend.soon') }}</span>
-      <span class="chip overdue">{{ t('bikeVisual.legend.overdue') }}</span>
-    </figcaption>
   </figure>
 </template>
 
@@ -188,43 +167,6 @@ function bikeImageAlt(visual: BikeVisualType): string {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.9rem;
-}
-
-.visual-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.visual-tabs {
-  display: inline-grid;
-  grid-template-columns: repeat(3, minmax(4rem, 1fr));
-  width: min(100%, 17rem);
-  padding: 0.18rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.visual-tab {
-  min-height: 2rem;
-  padding: 0.3rem 0.55rem;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.visual-tab.active {
-  background: var(--accent);
-  color: #fff;
 }
 
 .placement-tools {
@@ -373,41 +315,6 @@ function bikeImageAlt(visual: BikeVisualType): string {
   animation: hotspot-pulse 1.4s ease-in-out infinite;
 }
 
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.4rem;
-}
-
-.chip {
-  padding: 0.1rem 0.42rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.chip.watch {
-  border-color: color-mix(in srgb, var(--warning) 60%, white);
-  background: color-mix(in srgb, var(--warning-light) 70%, white);
-  color: color-mix(in srgb, var(--warning) 85%, black);
-}
-
-.chip.soon {
-  border-color: var(--warning);
-  background: var(--warning-light);
-  color: var(--warning);
-}
-
-.chip.overdue {
-  border-color: var(--danger);
-  background: var(--danger-light);
-  color: var(--danger);
-}
-
 @keyframes zone-pulse {
   0%,
   100% {
@@ -439,11 +346,6 @@ function bikeImageAlt(visual: BikeVisualType): string {
     min-height: 11.5rem;
   }
 
-  .visual-toolbar {
-    align-items: stretch;
-  }
-
-  .visual-tabs,
   .placement-tools,
   .placement-reset,
   .placement-finish {

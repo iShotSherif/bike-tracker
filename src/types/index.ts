@@ -79,6 +79,7 @@ export interface TrackerState {
   userId?: string
   authToken?: string
   stravaConnected?: boolean
+  bikeNameByBike?: Record<string, string>
   componentsByBike: Record<string, BikeComponent[]>
   hotspotPositionsByBike: Record<string, Partial<Record<BikeVisualType, Record<string, HotspotPosition>>>>
   bikeVisualByBike: Record<string, BikeVisualType>

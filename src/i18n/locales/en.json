@@ -114,7 +114,17 @@
   },
   "bike": {
     "unnamed": "Unnamed bike",
-    "totalKm": "{count} km total"
+    "totalKm": "{count} km total",
+    "settings": {
+      "open": "Open bike settings",
+      "name": "Name",
+      "resetName": "Reset",
+      "customComponents": "Custom markers",
+      "noCustomComponents": "No custom component on this bike.",
+      "placeMarker": "Place",
+      "repositioning": "Placing",
+      "placementActive": "Click the bike to place {component}."
+    }
   },
   "dashboard": {
     "title": "Needs attention",

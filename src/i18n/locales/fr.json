@@ -114,7 +114,17 @@
   },
   "bike": {
     "unnamed": "Vélo sans nom",
-    "totalKm": "{count} km au total"
+    "totalKm": "{count} km au total",
+    "settings": {
+      "open": "Ouvrir les réglages du vélo",
+      "name": "Nom",
+      "resetName": "Réinitialiser",
+      "customComponents": "Repères perso",
+      "noCustomComponents": "Aucun composant personnalisé sur ce vélo.",
+      "placeMarker": "Placer",
+      "repositioning": "En placement",
+      "placementActive": "Clique sur le vélo pour placer {component}."
+    }
   },
   "dashboard": {
     "title": "À surveiller",

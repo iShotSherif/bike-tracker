@@ -247,7 +247,7 @@ async function syncToWorker(): Promise<void> {
   try {
     await fetch(`${workerUrl}/sync`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(authToken.value ? { 'Authorization': `Bearer ${authToken.value}` } : {}) },
       body: JSON.stringify(payload),
     })
   } catch { /* non-fatal */ }
@@ -315,7 +315,7 @@ async function pushProfileToCloud(): Promise<void> {
   try {
     await fetch(`${workerUrl}/profile`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(authToken.value ? { 'Authorization': `Bearer ${authToken.value}` } : {}) },
       body: JSON.stringify({
         userId: userId.value,
         stravaConnected: stravaConnected.value,
@@ -333,7 +333,7 @@ async function pullProfileFromCloud(): Promise<boolean> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
   if (!workerUrl || !userId.value) return false
   try {
-    const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: { 'Content-Type': 'application/json' } })
+    const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: { 'Content-Type': 'application/json', ...(authToken.value ? { 'Authorization': `Bearer ${authToken.value}` } : {}) } })
     if (!res.ok) return false
     const data = await res.json() as Partial<TrackerState>
     if (typeof data.userId === 'string' && data.userId.trim()) userId.value = data.userId
@@ -394,7 +394,7 @@ async function loadStravaActivities(): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    const res = await fetch(`${workerUrl}/strava/activities?userId=${encodeURIComponent(userId.value)}`)
+    const res = await fetch(`${workerUrl}/strava/activities?userId=${encodeURIComponent(userId.value)}`, { headers: { ...(authToken.value ? { 'Authorization': `Bearer ${authToken.value}` } : {}) } })
     if (!res.ok) {
       if (res.status === 401) {
         stravaConnected.value = false

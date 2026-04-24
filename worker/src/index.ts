@@ -181,11 +181,10 @@ async function handleProfileSave(request: Request, env: Env, cors: Record<string
 
 async function handleHandoffCreate(request: Request, env: Env, cors: Record<string, string>): Promise<Response> {
   const authedUserId = await getUserIdFromRequest(request, env)
-  const body = await request.json() as { userId?: string }
-  const userId = authedUserId ?? body.userId
-  if (!userId) {
+  if (!authedUserId) {
     return new Response(JSON.stringify({ error: 'Non autorisé' }), { status: 401, headers: cors })
   }
+  const userId = authedUserId
 
   // Pull current profile snapshot
   const profileRaw = await env.ALERT_STORE.get(`profile:${userId}`)

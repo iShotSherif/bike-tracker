@@ -171,7 +171,7 @@ function toggleSettings() {
           </div>
         </div>
 
-        <SettingsView v-else @close="currentView = 'dashboard'" />
+        <SettingsView v-else />
       </template>
 
       <FooterActions

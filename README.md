@@ -25,6 +25,24 @@ npm run build
 
 La sortie est générée dans `dist/`. Tu peux la servir avec n'importe quel hébergement statique, par exemple `npx serve dist`.
 
+## Configuration Strava
+
+La connexion Strava passe par le Worker Cloudflare. Avant de déployer le Worker,
+définis les secrets avec l'identifiant et le secret de ton application Strava :
+
+```bash
+cd worker
+npx wrangler secret put STRAVA_CLIENT_ID
+npx wrangler secret put STRAVA_CLIENT_SECRET
+```
+
+Dans Strava, l'URL de callback autorisée doit correspondre à `STRAVA_REDIRECT_URI`
+dans `worker/wrangler.toml`, par exemple :
+
+```text
+https://bike-tracker-worker.componenttracker.workers.dev/strava/callback
+```
+
 ## Utilisation
 
 - **Charger les vélos** : saisis ta clé API puis charge tes vélos. Tes vélos et leur distance totale depuis Intervals.icu s'affichent.

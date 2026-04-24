@@ -382,11 +382,23 @@ function generateState(): string {
     .map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+function cleanSecret(value: string): string {
+  return value.replace(/^\uFEFF/, '').trim()
+}
+
 async function handleStravaAuth(request: Request, env: Env): Promise<Response> {
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
   if (!userId) {
     return new Response(JSON.stringify({ error: 'userId manquant' }), { status: 400, headers: corsHeaders(request) })
+  }
+  const clientId = cleanSecret(env.STRAVA_CLIENT_ID)
+  const redirectUri = cleanSecret(env.STRAVA_REDIRECT_URI)
+  if (!clientId || !redirectUri) {
+    return new Response(
+      JSON.stringify({ error: 'Configuration Strava incomplète côté serveur' }),
+      { status: 500, headers: corsHeaders(request) },
+    )
   }
 
   const state = `${userId}:${generateState()}`
@@ -394,8 +406,8 @@ async function handleStravaAuth(request: Request, env: Env): Promise<Response> {
   await env.ALERT_STORE.put(`strava-state:${state}`, userId, { expirationTtl: 300 })
 
   const params = new URLSearchParams({
-    client_id: env.STRAVA_CLIENT_ID,
-    redirect_uri: env.STRAVA_REDIRECT_URI,
+    client_id: clientId,
+    redirect_uri: redirectUri,
     response_type: 'code',
     approval_prompt: 'auto',
     scope: 'activity:read_all,profile:read_all',
@@ -429,8 +441,8 @@ async function handleStravaCallback(request: Request, env: Env): Promise<Respons
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      client_id: env.STRAVA_CLIENT_ID,
-      client_secret: env.STRAVA_CLIENT_SECRET,
+      client_id: cleanSecret(env.STRAVA_CLIENT_ID),
+      client_secret: cleanSecret(env.STRAVA_CLIENT_SECRET),
       code,
       grant_type: 'authorization_code',
     }),
@@ -457,8 +469,8 @@ async function refreshStravaToken(env: Env, tokens: StravaTokens): Promise<Strav
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      client_id: env.STRAVA_CLIENT_ID,
-      client_secret: env.STRAVA_CLIENT_SECRET,
+      client_id: cleanSecret(env.STRAVA_CLIENT_ID),
+      client_secret: cleanSecret(env.STRAVA_CLIENT_SECRET),
       refresh_token: tokens.refresh_token,
       grant_type: 'refresh_token',
     }),

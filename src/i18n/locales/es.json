@@ -105,6 +105,13 @@
       "daysRemainingMultiple": "{count} días restantes"
     }
   },
+  "settings": {
+    "eyebrow": "Configuración",
+    "title": "Ajustes",
+    "subtitle": "Gestiona recordatorios, notificaciones e historial sin salir del panel.",
+    "open": "Abrir ajustes",
+    "close": "Cerrar ajustes"
+  },
   "bike": {
     "unnamed": "Bici sin nombre",
     "totalKm": "{count} km totales"

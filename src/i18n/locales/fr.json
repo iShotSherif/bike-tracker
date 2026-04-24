@@ -105,6 +105,13 @@
       "daysRemainingMultiple": "{count} jours restants"
     }
   },
+  "settings": {
+    "eyebrow": "Configuration",
+    "title": "Réglages",
+    "subtitle": "Gère les rappels, les notifications et l'historique sans quitter ton tableau de bord.",
+    "open": "Ouvrir les réglages",
+    "close": "Fermer les réglages"
+  },
   "bike": {
     "unnamed": "Vélo sans nom",
     "totalKm": "{count} km au total"

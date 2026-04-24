@@ -105,6 +105,13 @@
       "daysRemainingMultiple": "{count} days left"
     }
   },
+  "settings": {
+    "eyebrow": "Configuration",
+    "title": "Settings",
+    "subtitle": "Manage reminders, notifications, and service history without leaving your dashboard.",
+    "open": "Open settings",
+    "close": "Close settings"
+  },
   "bike": {
     "unnamed": "Unnamed bike",
     "totalKm": "{count} km total"

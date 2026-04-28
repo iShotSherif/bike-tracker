@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import AlertsView from '@/components/AlertsView.vue'
+import { Settings } from 'lucide-vue-next'
 import AuthScreen from '@/components/AuthScreen.vue'
 import BikeCard from '@/components/BikeCard.vue'
 import ConnectionBadges from '@/components/ConnectionBadges.vue'
-import FooterActions from '@/components/FooterActions.vue'
 import HandoffModal from '@/components/HandoffModal.vue'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
+import SettingsView from '@/components/SettingsView.vue'
 import SetupView from '@/components/SetupView.vue'
 import { useBackup } from '@/composables/useBackup'
 import { useHandoff } from '@/composables/useHandoff'
@@ -29,7 +29,6 @@ const {
   authToken,
   login,
   logout,
-  alertComponents,
 } = useTracker()
 
 const { downloadExport, triggerImport } = useBackup({
@@ -48,7 +47,7 @@ const { showHandoffBadge, handleHandoffFromUrl } = useHandoff({
 
 const showAuth = ref(false)
 const showHandoff = ref(false)
-const currentView = ref<'dashboard' | 'alerts'>('dashboard')
+const currentView = ref<'dashboard' | 'settings'>('dashboard')
 const bikeCountLabel = computed(() =>
   bikes.value.length === 1
     ? t('app.badges.bikeFoundSingle')
@@ -101,13 +100,17 @@ onMounted(async () => {
 function skipConnection() {
   athlete.value = { id: 'local', name: 'Local', bikes: [] } as typeof athlete.value
 }
+
+function toggleSettings() {
+  currentView.value = currentView.value === 'settings' ? 'dashboard' : 'settings'
+}
 </script>
 
 <template>
   <div class="app">
     <header class="header">
       <div class="header-main">
-        <div class="header-icon">🚴</div>
+        <div class="header-mark">RM</div>
         <div class="header-text">
           <h1 class="title">{{ t('app.title') }}</h1>
           <p class="subtitle">{{ t('app.subtitle') }}</p>
@@ -116,6 +119,15 @@ function skipConnection() {
 
       <div class="header-actions">
         <LanguageSwitcher />
+        <button
+          type="button"
+          :class="['header-icon-button', { active: currentView === 'settings' }]"
+          :aria-label="t('settings.open')"
+          :aria-pressed="currentView === 'settings'"
+          @click="toggleSettings"
+        >
+          <Settings :size="18" stroke-width="2.2" />
+        </button>
       </div>
     </header>
 
@@ -145,16 +157,6 @@ function skipConnection() {
           :show-strava="stravaConnected"
         />
 
-        <nav class="tabs">
-          <button :class="['tab', { active: currentView === 'dashboard' }]" @click="currentView = 'dashboard'">
-            {{ t('app.tabs.bikes') }}
-          </button>
-          <button :class="['tab', { active: currentView === 'alerts' }]" @click="currentView = 'alerts'">
-            {{ t('app.tabs.alerts') }}
-            <span v-if="alertComponents.length" class="tab-badge">{{ alertComponents.length }}</span>
-          </button>
-        </nav>
-
         <div v-if="currentView === 'dashboard'" class="bike-grid">
           <BikeCard v-for="bike in bikes" :key="bike.id" :bike="bike" :id="`bike-${bike.id}`" />
 
@@ -168,19 +170,18 @@ function skipConnection() {
           </div>
         </div>
 
-        <AlertsView v-else-if="currentView === 'alerts'" />
+        <SettingsView
+          v-else
+          :auth-token="authToken"
+          :show-refresh-strava="stravaConnected"
+          @download-export="downloadExport"
+          @logout="logout"
+          @open-auth="showAuth = true"
+          @open-handoff="showHandoff = true"
+          @refresh-strava="loadStravaActivities"
+          @trigger-import="triggerImport"
+        />
       </template>
-
-      <FooterActions
-        :auth-token="authToken"
-        :show-refresh-strava="stravaConnected"
-        @download-export="downloadExport"
-        @logout="logout"
-        @open-auth="showAuth = true"
-        @open-handoff="showHandoff = true"
-        @refresh-strava="loadStravaActivities"
-        @trigger-import="triggerImport"
-      />
     </section>
   </div>
 </template>
@@ -195,12 +196,12 @@ function skipConnection() {
 
 .header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1.5px solid var(--border);
 }
 
 .header-main {
@@ -211,13 +212,46 @@ function skipConnection() {
 
 .header-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.45rem;
 }
 
-.header-icon {
-  font-size: 2.25rem;
-  line-height: 1;
+.header-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.45rem;
+  height: 2.45rem;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
   flex-shrink: 0;
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.header-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.header-icon-button:hover,
+.header-icon-button.active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent);
+  background: var(--accent-light);
 }
 
 .title {
@@ -258,55 +292,6 @@ function skipConnection() {
   color: var(--ok, #16a34a);
   margin-bottom: 0.75rem;
   animation: fadeIn 0.3s ease;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.25rem;
-  margin-bottom: 1.25rem;
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 0;
-}
-
-.tab {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-  font-family: inherit;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: color 0.12s;
-}
-
-.tab:hover {
-  color: var(--text);
-}
-
-.tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
-
-.tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.1rem;
-  height: 1.1rem;
-  padding: 0 0.25rem;
-  border-radius: 999px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 0.68rem;
-  font-weight: 700;
 }
 
 .bike-grid {
@@ -352,11 +337,15 @@ function skipConnection() {
 
 @media (max-width: 640px) {
   .header {
-    flex-direction: column;
+    align-items: flex-start;
   }
 
   .header-main {
-    width: 100%;
+    min-width: 0;
+  }
+
+  .header-actions {
+    margin-left: auto;
   }
 }
 </style>

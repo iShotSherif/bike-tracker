@@ -66,7 +66,7 @@
     "title": "Connexion",
     "subtitle": "Retrouve ton profil sur n'importe quel appareil.",
     "emailLabel": "Ton adresse e-mail",
-    "emailPlaceholder": "toi@example.com",
+    "emailPlaceholder": "toi\\@example.com",
     "sendLink": "M'envoyer un lien de connexion",
     "sending": "Envoi…",
     "codeSent": "Un code à 6 chiffres a été envoyé à {email}.",
@@ -105,9 +105,29 @@
       "daysRemainingMultiple": "{count} jours restants"
     }
   },
+  "settings": {
+    "eyebrow": "Configuration",
+    "title": "Réglages",
+    "subtitle": "Gère les rappels, les notifications et l'historique sans quitter ton tableau de bord.",
+    "open": "Ouvrir les réglages",
+    "close": "Fermer les réglages",
+    "dataTitle": "Données et compte"
+  },
   "bike": {
     "unnamed": "Vélo sans nom",
-    "totalKm": "{count} km au total"
+    "totalKm": "{count} km au total",
+    "settings": {
+      "open": "Ouvrir les réglages du vélo",
+      "name": "Nom",
+      "resetName": "Réinitialiser",
+      "customComponents": "Repères perso",
+      "noCustomComponents": "Aucun composant personnalisé sur ce vélo.",
+      "placeMarker": "Placer",
+      "repositioning": "En placement",
+      "markerPlaced": "Sur le vélo",
+      "markerMissing": "À placer",
+      "placementActive": "Clique sur le vélo pour placer {component}."
+    }
   },
   "dashboard": {
     "title": "À surveiller",
@@ -159,6 +179,7 @@
     },
     "actions": {
       "addComponent": "+ Ajouter un composant",
+      "customComponent": "Autre composant",
       "history": "Historique",
       "add": "Ajouter"
     },
@@ -192,26 +213,24 @@
     "test": "Tester"
   },
   "bikeVisual": {
-    "eyebrow": "Carte d'entretien",
-    "headline": "Repère en un coup d'œil ce qui demande ton attention avant la prochaine sortie.",
-    "caption": "Les composants critiques s'affichent directement sur le vélo pour une lecture immédiate, sans fouiller dans une liste."
-  },
-  "visuals": {
-    "road": "Route",
-    "gravel": "Gravel",
-    "mtb": "VTT"
-  },
-  "togglePlacement": "Placer les repères",
-  "finishPlacement": "Terminer le placement",
-  "resetPosition": "Réinitialiser la position",
-  "placementHint": "Clique n'importe où sur l'image du vélo pour placer {component}",
-  "altRoad": "Vélo de route en studio",
-  "altGravel": "Vélo gravel en studio",
-  "altMtb": "VTT en studio",
-  "legend": {
-    "watch": "À surveiller",
-    "soon": "Bientôt à faire",
-    "overdue": "À remplacer"
+    "visualType": "Type de vélo",
+    "placing": "Positionnement : {component}",
+    "finishPlacement": "Terminer",
+    "resetPosition": "Retirer le repère",
+    "placementHint": "Clique sur le vélo pour placer {component}",
+    "altRoad": "Vélo de route en studio",
+    "altGravel": "Vélo gravel en studio",
+    "altMtb": "VTT en studio",
+    "visuals": {
+      "road": "Route",
+      "gravel": "Gravel",
+      "mtb": "VTT"
+    },
+    "legend": {
+      "watch": "À surveiller",
+      "soon": "Bientôt à faire",
+      "overdue": "À remplacer"
+    }
   },
   "handoff": {
     "title": "Ouvrir sur mon téléphone",

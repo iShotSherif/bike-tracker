@@ -96,6 +96,9 @@ const error = ref<string | null>(null)
 
 const bikes = computed<IntervalsBike[]>(() => athlete.value?.bikes ?? [])
 
+const bikeNameByBike = ref<Record<string, string>>(
+  initialState.bikeNameByBike ?? {}
+)
 const componentsByBike = ref<Record<string, BikeComponent[]>>(
   initialState.componentsByBike ?? {}
 )
@@ -114,6 +117,7 @@ function persist(): void {
     userId: userId.value,
     authToken: authToken.value || undefined,
     stravaConnected: stravaConnected.value,
+    bikeNameByBike: bikeNameByBike.value,
     componentsByBike: componentsByBike.value,
     hotspotPositionsByBike: hotspotPositionsByBike.value,
     bikeVisualByBike: bikeVisualByBike.value,
@@ -131,6 +135,22 @@ function setNotificationSettings(s: NotificationSettings): void {
   persist()
 }
 
+function getBikeDisplayName(bikeId: string, fallbackName: string): string {
+  return bikeNameByBike.value[bikeId]?.trim() || fallbackName
+}
+
+function setBikeDisplayName(bikeId: string, name: string): void {
+  const cleanName = name.trim()
+  if (!cleanName) {
+    const next = { ...bikeNameByBike.value }
+    delete next[bikeId]
+    bikeNameByBike.value = next
+  } else {
+    bikeNameByBike.value = { ...bikeNameByBike.value, [bikeId]: cleanName }
+  }
+  persist()
+}
+
 function getComponentsForBike(bikeId: string): BikeComponent[] {
   return componentsByBike.value[bikeId] ?? []
 }
@@ -140,13 +160,14 @@ function setComponentsForBike(bikeId: string, components: BikeComponent[]): void
   persist()
 }
 
-function addComponent(bikeId: string, component: Omit<BikeComponent, 'id'>): void {
+function addComponent(bikeId: string, component: Omit<BikeComponent, 'id'>): BikeComponent {
   const list = getComponentsForBike(bikeId)
   const newOne: BikeComponent = {
     ...component,
     id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
   }
   setComponentsForBike(bikeId, [...list, newOne])
+  return newOne
 }
 
 function getHotspotPositionsForBike(bikeId: string, visual: BikeVisualType): Record<string, HotspotPosition> {
@@ -280,6 +301,7 @@ function exportState(): string {
   return JSON.stringify({
     userId: userId.value,
     stravaConnected: stravaConnected.value,
+    bikeNameByBike: bikeNameByBike.value,
     componentsByBike: componentsByBike.value,
     hotspotPositionsByBike: hotspotPositionsByBike.value,
     bikeVisualByBike: bikeVisualByBike.value,
@@ -297,6 +319,7 @@ function importState(json: string): void {
       userId.value = legacyUserIdFromApiKey(parsed.apiKey) ?? userId.value
     }
     if (typeof parsed.stravaConnected === 'boolean') stravaConnected.value = parsed.stravaConnected
+    if (parsed.bikeNameByBike) bikeNameByBike.value = parsed.bikeNameByBike
     if (parsed.componentsByBike) componentsByBike.value = parsed.componentsByBike
     if (parsed.hotspotPositionsByBike) hotspotPositionsByBike.value = parsed.hotspotPositionsByBike
     if (parsed.bikeVisualByBike) bikeVisualByBike.value = parsed.bikeVisualByBike
@@ -319,6 +342,7 @@ async function pushProfileToCloud(): Promise<void> {
       body: JSON.stringify({
         userId: userId.value,
         stravaConnected: stravaConnected.value,
+        bikeNameByBike: bikeNameByBike.value,
         componentsByBike: componentsByBike.value,
         hotspotPositionsByBike: hotspotPositionsByBike.value,
         bikeVisualByBike: bikeVisualByBike.value,
@@ -331,13 +355,14 @@ async function pushProfileToCloud(): Promise<void> {
 
 async function pullProfileFromCloud(): Promise<boolean> {
   const workerUrl = import.meta.env.VITE_WORKER_URL as string | undefined
-  if (!workerUrl || !userId.value) return false
+  if (!workerUrl || !userId.value || !authToken.value) return false
   try {
     const res = await fetch(`${workerUrl}/profile/${userId.value}`, { headers: { 'Content-Type': 'application/json', ...(authToken.value ? { 'Authorization': `Bearer ${authToken.value}` } : {}) } })
     if (!res.ok) return false
     const data = await res.json() as Partial<TrackerState>
     if (typeof data.userId === 'string' && data.userId.trim()) userId.value = data.userId
     if (typeof data.stravaConnected === 'boolean') stravaConnected.value = data.stravaConnected
+    if (data.bikeNameByBike) bikeNameByBike.value = data.bikeNameByBike
     if (data.componentsByBike) componentsByBike.value = data.componentsByBike
     if (data.hotspotPositionsByBike) hotspotPositionsByBike.value = data.hotspotPositionsByBike
     if (data.bikeVisualByBike) bikeVisualByBike.value = data.bikeVisualByBike
@@ -361,6 +386,7 @@ async function login(email: string, otp: string): Promise<boolean> {
     })
     if (!res.ok) return false
     const data = await res.json() as { token: string; userId: string }
+    userId.value = data.userId
     authToken.value = data.token
     persist()
     await pullProfileFromCloud()
@@ -454,7 +480,7 @@ const alertComponents = computed(() =>
       return {
         component: c,
         bikeId: bike.id,
-        bikeName: bike.name,
+        bikeName: getBikeDisplayName(bike.id, bike.name),
         status: componentStatus(c, km, kmStart),
       }
     })
@@ -472,12 +498,15 @@ export function useTracker() {
     loading,
     error,
     bikes,
+    bikeNameByBike,
     componentsByBike,
     hotspotPositionsByBike,
     bikeVisualByBike,
     serviceLog,
     alertComponents,
     getComponentsForBike,
+    getBikeDisplayName,
+    setBikeDisplayName,
     getHotspotPositionsForBike,
     getBikeVisual,
     setComponentsForBike,

@@ -66,7 +66,7 @@
     "title": "Sign in",
     "subtitle": "Find your profile on any device.",
     "emailLabel": "Your email address",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "you\\@example.com",
     "sendLink": "Send me a sign-in link",
     "sending": "Sending…",
     "codeSent": "A 6-digit code was sent to {email}.",
@@ -105,9 +105,29 @@
       "daysRemainingMultiple": "{count} days left"
     }
   },
+  "settings": {
+    "eyebrow": "Configuration",
+    "title": "Settings",
+    "subtitle": "Manage reminders, notifications, and service history without leaving your dashboard.",
+    "open": "Open settings",
+    "close": "Close settings",
+    "dataTitle": "Data and account"
+  },
   "bike": {
     "unnamed": "Unnamed bike",
-    "totalKm": "{count} km total"
+    "totalKm": "{count} km total",
+    "settings": {
+      "open": "Open bike settings",
+      "name": "Name",
+      "resetName": "Reset",
+      "customComponents": "Custom markers",
+      "noCustomComponents": "No custom component on this bike.",
+      "placeMarker": "Place",
+      "repositioning": "Placing",
+      "markerPlaced": "On bike",
+      "markerMissing": "To place",
+      "placementActive": "Click the bike to place {component}."
+    }
   },
   "dashboard": {
     "title": "Needs attention",
@@ -159,6 +179,7 @@
     },
     "actions": {
       "addComponent": "+ Add a component",
+      "customComponent": "Custom component",
       "history": "History",
       "add": "Add"
     },
@@ -192,21 +213,19 @@
     "test": "Test"
   },
   "bikeVisual": {
-    "eyebrow": "Maintenance map",
-    "headline": "See at a glance what needs attention before your next ride.",
-    "caption": "Critical components appear directly on the bike for quick reading, without digging through a list.",
+    "visualType": "Bike type",
+    "placing": "Positioning: {component}",
+    "finishPlacement": "Done",
+    "resetPosition": "Clear marker",
+    "placementHint": "Click the bike to place {component}",
+    "altRoad": "Road bike in studio",
+    "altGravel": "Gravel bike in studio",
+    "altMtb": "Mountain bike in studio",
     "visuals": {
       "road": "Road",
       "gravel": "Gravel",
       "mtb": "MTB"
     },
-    "togglePlacement": "Place markers",
-    "finishPlacement": "Finish placing",
-    "resetPosition": "Reset position",
-    "placementHint": "Click anywhere on the bike image to place {component}",
-    "altRoad": "Road bike in studio",
-    "altGravel": "Gravel bike in studio",
-    "altMtb": "Mountain bike in studio",
     "legend": {
       "watch": "Watch",
       "soon": "Due soon",
